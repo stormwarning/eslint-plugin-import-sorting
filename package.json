@@ -12,6 +12,9 @@
     "semantic-release": "semantic-release",
     "test": "npm run lint"
   },
+  "dependencies": {
+    "builtin-modules": "^3.0.0"
+  },
   "peerDependencies": {
     "eslint": ">=5"
   },
