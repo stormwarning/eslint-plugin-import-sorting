@@ -11,7 +11,8 @@
     "test": "npm run lint"
   },
   "dependencies": {
-    "builtin-modules": "3.1.0"
+    "builtin-modules": "3.1.0",
+    "eslint-module-utils": "2.4.1"
   },
   "peerDependencies": {
     "eslint": ">=6"
