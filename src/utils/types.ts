@@ -1,6 +1,5 @@
-'use strict'
-
-const builtinModules = require('builtin-modules')
+import builtinModules from 'builtin-modules'
+import { Rule } from 'eslint'
 
 // function hasDefaultMember(module) {}
 
@@ -20,7 +19,7 @@ const builtinModules = require('builtin-modules')
 //     return !hasMember(module)
 // }
 
-function isNodeModule(name, path) {
+function isNodeModule(name: string): boolean {
     let moduleSet = new Set(builtinModules)
 
     if (typeof name !== 'string') {
@@ -30,7 +29,10 @@ function isNodeModule(name, path) {
     return moduleSet.has(name)
 }
 
-function isFrameworkModule(name, options, path) {
+function isFrameworkModule(
+    name: string,
+    options: { 'known-framework': Array<string> }
+): boolean {
     if (options && Object.keys(options).includes('known-framework')) {
         return options['known-framework'].some((str) => name.startsWith(str))
     } else {
@@ -38,7 +40,10 @@ function isFrameworkModule(name, options, path) {
     }
 }
 
-function isInternalModule(name, options, path) {
+function isInternalModule(
+    name: string,
+    options: { 'known-firstparty': Array<string> }
+): boolean {
     if (options && Object.keys(options).includes('known-firstparty')) {
         return options['known-firstparty'].some((str) => name.startsWith(str))
     } else {
@@ -46,22 +51,28 @@ function isInternalModule(name, options, path) {
     }
 }
 
-function typeTest(name, options, path) {
-    if (isNodeModule(name, path)) return 'standard'
-    if (isFrameworkModule(name, options, path)) return 'framework'
-    // if (isExternalModule(name, options, path)) return 'external'
-    if (isInternalModule(name, options, path)) return 'firstparty'
-    // if (isLocalModule(name, options, path)) return 'local'
+// function typeTest(name, options, path) {
+function typeTest(
+    name: string,
+    options: {
+        'known-framework': Array<string>
+        'known-firstparty': Array<string>
+    }
+): string {
+    if (isNodeModule(name)) return 'standard'
+    if (isFrameworkModule(name, options)) return 'framework'
+    // if (isExternalModule(name, options)) return 'external'
+    if (isInternalModule(name, options)) return 'firstparty'
+    // if (isLocalModule(name, options)) return 'local'
 
     return 'unknown'
 }
 
-function determineImportType(name, context) {
+export default function determineImportType(
+    name: string,
+    context: Rule.RuleContext
+): string {
     console.log('OPTIONS: ', context.options)
     // return typeTest(name, context.settings, resolve(name, context))
     return typeTest(name, context.options[1])
-}
-
-module.exports = {
-    determineImportType,
 }
