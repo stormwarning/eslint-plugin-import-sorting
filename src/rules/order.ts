@@ -1,8 +1,17 @@
-'use strict'
+import { Rule } from 'eslint'
+import { ImportDeclaration } from 'estree'
+import determineImportType from '../utils/types'
 
-const { determineImportType } = require('../utils/types')
-
+type GroupName =
+    | 'side-effect'
+    | 'standard'
+    | 'framework'
+    | 'external'
+    | 'firstparty'
+    | 'local'
+type ImportGroups = GroupName[]
 const DEFAULT_GROUPS = [
+    'side-effect',
     'standard',
     'framework',
     'external',
@@ -213,7 +222,7 @@ function canReorderItems(firstNode, secondNode) {
     ].sort()
     let nodesBetween = parent.body.slice(firstIndex, secondIndex + 1)
 
-    for (var nodeBetween of nodesBetween) {
+    for (let nodeBetween of nodesBetween) {
         if (!canCrossNodeWhileReorder(nodeBetween)) return false
     }
 
@@ -315,6 +324,7 @@ function registerNode(context, node, name, type, ranks, imported) {
 }
 
 const types = [
+    'side-effect',
     'standard',
     'framework',
     'external',
@@ -428,8 +438,8 @@ function makeNewlinesBetweenReport(context, imported, newlinesBetweenImports) {
                         'There should be at least one empty line between import groups',
                     fix: fixNewLineAfterImport(
                         context,
-                        previousImport,
-                        currentImport
+                        previousImport
+                        // currentImport
                     ),
                 })
             } else if (
@@ -463,7 +473,7 @@ function makeNewlinesBetweenReport(context, imported, newlinesBetweenImports) {
     })
 }
 
-function create(context) {
+function create(context: Rule.RuleContext) {
     let options = context.options[0] || {} // Get framework & first-party strings here.
     let newlineBetweenGroups = true // Get true/false option for this.
     let ranks
@@ -472,34 +482,36 @@ function create(context) {
         ranks = convertGroupsToRanks(options.groups || DEFAULT_GROUPS)
     } catch (error) {
         return {
-            Program: function(node) {
+            Program: function(node): void {
                 context.report({ node, message: error.message })
             },
         }
     }
 
     let imported = []
-    // eslint-disable-next-line no-unused-vars
     let level = 0
 
-    function incrementLevel() {
+    function incrementLevel(): void {
         level++
     }
 
-    function decrementLevel() {
+    function decrementLevel(): void {
         level--
     }
 
     return {
-        ImportDeclaration: function handleImports(node) {
+        ImportDeclaration: function handleImports(
+            node: ImportDeclaration
+        ): void {
             if (node.specifiers.length) {
                 // Ignoring unassigned imports
                 let name = node.source.value
+                console.log('RANKS: ', ranks, 'IMPORTED: ', imported)
                 registerNode(context, node, name, 'import', ranks, imported)
             }
         },
 
-        'Program:exit': function reportAndReset() {
+        'Program:exit': function reportAndReset(): void {
             makeOutOfOrderReport(context, imported)
 
             if (newlineBetweenGroups) {
@@ -526,7 +538,7 @@ function create(context) {
     }
 }
 
-module.exports = {
+export default {
     meta: {
         type: 'suggestion',
         docs: {
@@ -543,17 +555,23 @@ module.exports = {
                 properties: {
                     'known-framework': {
                         type: 'array',
+                        items: { type: 'string' },
+                        additionalItems: false,
                     },
                     'known-firstparty': {
                         type: 'array',
+                        items: { type: 'string' },
+                        additionalItems: false,
                     },
                     groups: {
                         type: 'array',
+                        items: { type: 'string' },
+                        additionalItems: false,
                     },
-                    additionalProperties: false,
                 },
+                additionalProperties: false,
             },
         ],
     },
     create,
-}
+} as Rule.RuleModule
