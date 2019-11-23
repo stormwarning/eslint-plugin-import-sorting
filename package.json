@@ -17,7 +17,7 @@
     "build": "tsc",
     "clean": "rm -rf lib",
     "lint": "prettier-eslint '**/*.js' --list-different",
-    "test": "npm run lint"
+    "test": "jest"
   },
   "dependencies": {
     "builtin-modules": "3.1.0",
@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@types/eslint": "6.1.x",
+    "@types/jest": "24.0.x",
     "@types/node": "12.12.x",
     "@typescript-eslint/eslint-plugin": "2.8.x",
     "@typescript-eslint/parser": "2.8.x",
@@ -41,7 +42,9 @@
     "eslint-plugin-isort": "file:.",
     "eslint-plugin-node": "10.0.0",
     "husky": "3.0.x",
+    "jest": "24.9.x",
     "lint-staged": "9.4.x",
+    "ts-jest": "24.2.x",
     "typescript": "3.7.x"
   },
   "keywords": [
