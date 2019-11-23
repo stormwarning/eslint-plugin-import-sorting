@@ -1,6 +1,30 @@
 import builtinModules from 'builtin-modules'
 import { Rule } from 'eslint'
 
+export interface Import {
+    start: number
+    end: number
+
+    importStart?: number
+    importEnd?: number
+
+    type: ImportType
+
+    moduleName: string
+
+    defaultMember?: string
+    namespaceMember?: string
+    namedMembers: NamedMember[]
+}
+
+export type ImportType = 'import' | 'require' | 'import-equals' | 'import-type'
+
+export interface NamedMember {
+    name: string
+    alias: string
+    type?: boolean
+}
+
 // function hasDefaultMember(module) {}
 
 // function hasNamespaceMember(module) {}
