@@ -2,6 +2,14 @@ import { Rule } from 'eslint'
 import { ImportDeclaration } from 'estree'
 import determineImportType from '../utils/types'
 
+type GroupName =
+    | 'side-effect'
+    | 'standard'
+    | 'framework'
+    | 'external'
+    | 'firstparty'
+    | 'local'
+type ImportGroups = GroupName[]
 const DEFAULT_GROUPS = [
     'side-effect',
     'standard',
@@ -474,7 +482,7 @@ function create(context: Rule.RuleContext) {
         ranks = convertGroupsToRanks(options.groups || DEFAULT_GROUPS)
     } catch (error) {
         return {
-            Program: function(node) {
+            Program: function(node): void {
                 context.report({ node, message: error.message })
             },
         }
@@ -483,16 +491,18 @@ function create(context: Rule.RuleContext) {
     let imported = []
     let level = 0
 
-    function incrementLevel() {
+    function incrementLevel(): void {
         level++
     }
 
-    function decrementLevel() {
+    function decrementLevel(): void {
         level--
     }
 
     return {
-        ImportDeclaration: function handleImports(node: ImportDeclaration) {
+        ImportDeclaration: function handleImports(
+            node: ImportDeclaration
+        ): void {
             if (node.specifiers.length) {
                 // Ignoring unassigned imports
                 let name = node.source.value
@@ -501,7 +511,7 @@ function create(context: Rule.RuleContext) {
             }
         },
 
-        'Program:exit': function reportAndReset() {
+        'Program:exit': function reportAndReset(): void {
             makeOutOfOrderReport(context, imported)
 
             if (newlineBetweenGroups) {
@@ -545,15 +555,21 @@ export default {
                 properties: {
                     'known-framework': {
                         type: 'array',
+                        items: { type: 'string' },
+                        additionalItems: false,
                     },
                     'known-firstparty': {
                         type: 'array',
+                        items: { type: 'string' },
+                        additionalItems: false,
                     },
                     groups: {
                         type: 'array',
+                        items: { type: 'string' },
+                        additionalItems: false,
                     },
-                    additionalProperties: false,
                 },
+                additionalProperties: false,
             },
         ],
     },
