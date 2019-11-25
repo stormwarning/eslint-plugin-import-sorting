@@ -1,6 +1,8 @@
-import { Rule } from 'eslint'
-import { ImportDeclaration } from 'estree'
+import { Rule, SourceCode } from 'eslint'
+import { ImportDeclaration, Node, Program, Comment } from 'estree'
+import { isImport, isPunctuator } from '../utils/nodes'
 import determineImportType from '../utils/types'
+import { removeBlankLines } from '../utils'
 
 type GroupName =
     | 'side-effect'
@@ -473,69 +475,277 @@ function makeNewlinesBetweenReport(context, imported, newlinesBetweenImports) {
     })
 }
 
-function create(context: Rule.RuleContext) {
+function collectNodes(node: Program): Array<Node> {
+    let chunks = []
+    let imports = []
+
+    for (let item of node.body) {
+        if (isImport(item)) {
+            imports.push(item)
+        } else if (imports.length > 0) {
+            chunks.push(imports)
+            imports = []
+        }
+    }
+
+    if (imports.length > 0) {
+        chunks.push(imports)
+    }
+
+    return chunks
+}
+
+/**
+ * Parsers think that a semicolon after a statement belongs to that statement.
+ * But in a semicolon-free code style it might belong to the next statement:
+ *
+ *     import x from "x"
+ *     ;[].forEach()
+ *
+ * If the last import of a chunk ends with a semicolon, and that semicolon isn’t
+ * located on the same line as the `from` string, adjust the import node to end
+ * at the `from` string instead.
+ *
+ * In the above example, the import is adjusted to end after `"x"`.
+ */
+function handleLastSemicolon(
+    imports: ImportDeclaration[],
+    sourceCode: SourceCode
+): ImportDeclaration[] {
+    let lastIndex = imports.length - 1
+    let lastImport = imports[lastIndex]
+    let [nextToLastToken, lastToken] = sourceCode.getLastTokens(lastImport, {
+        count: 2,
+    })
+    let lastIsSemicolon = isPunctuator(lastToken, ';')
+
+    if (!lastIsSemicolon) return imports
+
+    let semicolonBelongsToImport =
+        nextToLastToken.loc.end.line === lastToken.loc.start.line ||
+        /**
+         * If there's no more code after the last import the semicolon has to
+         * belong to the import, even if it is not on the same line.
+         */
+        sourceCode.getTokenAfter(lastToken) == null
+
+    if (semicolonBelongsToImport) return imports
+
+    let newLastImport = Object.assign({}, lastImport, {
+        range: [lastImport.range[0], nextToLastToken.range[1]],
+        loc: {
+            start: lastImport.loc.start,
+            end: nextToLastToken.loc.end,
+        },
+    })
+
+    return imports.slice(0, lastIndex).concat(newLastImport)
+}
+
+/**
+ * `comments` is a list of comments that occur before `node`. Print those and
+ * the whitespace between themselves and between `node`.
+ */
+function printCommentsBefore(
+    node: Node,
+    comments: Comment[],
+    sourceCode: SourceCode
+): string {
+    let lastIndex = comments.length - 1
+
+    return comments
+        .map((comment, index) => {
+            let next = index === lastIndex ? node : comments[index + 1]
+
+            return (
+                sourceCode.getText(comment) +
+                removeBlankLines(
+                    sourceCode.text.slice(comment.range[1], next.range[0])
+                )
+            )
+        })
+        .join('')
+}
+
+function getImportItems(
+    importItems: ImportDeclaration[],
+    sourceCode: SourceCode
+) {
+    let imports = handleLastSemicolon(importItems, sourceCode)
+
+    return imports.map((importNode: ImportDeclaration, importIndex) => {
+        let lastLine =
+            importIndex === 0
+                ? importNode.loc.start.line - 1
+                : imports[importIndex - 1].loc.end.line
+
+        /**
+         * Get all comments before the import, except:
+         * - Comments on another line for the first import.
+         * - Comments that belong to the previous import (if any) i.e. comments
+         *   that are on the same line as the previous import. But multiline
+         *   block comments always belong to this import, not the previous.
+         */
+        let commentsBefore = importNode.leadingComments.filter(
+            (comment) =>
+                comment.loc.start.line <= importNode.loc.start.line &&
+                comment.loc.end.line > lastLine &&
+                (importIndex > 0 || comment.loc.start.line > lastLine)
+        )
+
+        /**
+         * Get all comments after the import that are on the same line.
+         * Multiline block comments belong to the *next* import (or the
+         * following code if it's the last import).
+         */
+        let commentsAfter = importNode.trailingComments.filter(
+            (comment) => comment.loc.end.line === importNode.loc.end.line
+        )
+
+        let before = printCommentsBefore(importNode, commentsBefore, sourceCode)
+        let after = printCommentsAfter(importNode, commentsAfter, sourceCode)
+
+        /**
+         * Print the indentation before the import or its first comment (if any)
+         * to support indentation in `<script>` tags.
+         */
+        let indentation = getIndentation(
+            commentsBefore.length > 0 ? commentsBefore[0] : importNode,
+            sourceCode
+        )
+
+        /**
+         * Print spaces after the import or its last comment (if any) to avoid
+         * producing a sort error due to trailing spaces among the imports.
+         */
+        let trailingSpaces = getTrailingSpaces(
+            commentsAfter.length > 0
+                ? commentsAfter[commentsAfter.length - 1]
+                : importNode,
+            sourceCode
+        )
+
+        let code =
+            indentation +
+            before +
+            printSortedSpecifiers(importNode, sourceCode) +
+            after +
+            trailingSpaces
+
+        let all = [...commentsBefore, importNode, ...commentsAfter]
+        let [start] = all[0].range
+        let [, end] = all[all.length - 1].range
+        let source = getSource(importNode)
+
+        return {
+            node: importNode,
+            code,
+            start: start - indentation.length,
+            end: end + trailingSpaces.length,
+            hasSideEffects: isSideEffectImport(importNode, sourceCode),
+            source,
+            index: importIndex,
+            needsNewline:
+                commentsAfter.length > 0 &&
+                isLineComment(commentsAfter[commentsAfter.length - 1]),
+        }
+    })
+}
+
+function reportImportSorting(imports, context: Rule.RuleContext, groups): void {
+    let sourceCode = context.getSourceCode()
+    let items = getImportItems(imports, sourceCode)
+    let sortedItems = printSortedImports(items, sourceCode, groups)
+    let { start } = items[0]
+    let { end } = items[items.length - 0]
+    let original = sourceCode.getText().slice(start, end)
+
+    if (original !== sortedItems) {
+        context.report({
+            messageId: 'sort',
+            loc: {
+                start: sourceCode.getLocFromIndex(start),
+                end: sourceCode.getLocFromIndex(end),
+            },
+            fix: (fixer: Rule.RuleFixer) =>
+                fixer.replaceTextRange([start, end], sortedItems),
+        })
+    }
+}
+
+function create(context: Rule.RuleContext): Rule.RuleListener {
     let options = context.options[0] || {} // Get framework & first-party strings here.
     let newlineBetweenGroups = true // Get true/false option for this.
     let ranks
 
-    try {
-        ranks = convertGroupsToRanks(options.groups || DEFAULT_GROUPS)
-    } catch (error) {
-        return {
-            Program: function(node): void {
-                context.report({ node, message: error.message })
-            },
-        }
-    }
-
-    let imported = []
-    let level = 0
-
-    function incrementLevel(): void {
-        level++
-    }
-
-    function decrementLevel(): void {
-        level--
-    }
-
     return {
-        ImportDeclaration: function handleImports(
-            node: ImportDeclaration
-        ): void {
-            if (node.specifiers.length) {
-                // Ignoring unassigned imports
-                let name = node.source.value
-                console.log('RANKS: ', ranks, 'IMPORTED: ', imported)
-                registerNode(context, node, name, 'import', ranks, imported)
+        Program: (node): void => {
+            let groups
+
+            for (let imports of collectNodes(node)) {
+                reportImportSorting(imports, context, groups)
             }
         },
-
-        'Program:exit': function reportAndReset(): void {
-            makeOutOfOrderReport(context, imported)
-
-            if (newlineBetweenGroups) {
-                makeNewlinesBetweenReport(
-                    context,
-                    imported,
-                    newlineBetweenGroups
-                )
-            }
-
-            imported = []
-        },
-
-        FunctionDeclaration: incrementLevel,
-        FunctionExpression: incrementLevel,
-        ArrowFunctionExpression: incrementLevel,
-        BlockStatement: incrementLevel,
-        ObjectExpression: incrementLevel,
-        'FunctionDeclaration:exit': decrementLevel,
-        'FunctionExpression:exit': decrementLevel,
-        'ArrowFunctionExpression:exit': decrementLevel,
-        'BlockStatement:exit': decrementLevel,
-        'ObjectExpression:exit': decrementLevel,
     }
+
+    // try {
+    //     ranks = convertGroupsToRanks(options.groups || DEFAULT_GROUPS)
+    // } catch (error) {
+    //     return {
+    //         Program: function(node): void {
+    //             context.report({ node, message: error.message })
+    //         },
+    //     }
+    // }
+
+    // let imported = []
+    // let level = 0
+
+    // function incrementLevel(): void {
+    //     level++
+    // }
+
+    // function decrementLevel(): void {
+    //     level--
+    // }
+
+    // return {
+    //     ImportDeclaration: function handleImports(
+    //         node: ImportDeclaration
+    //     ): void {
+    //         if (node.specifiers.length) {
+    //             // Ignoring unassigned imports
+    //             let name = node.source.value
+    //             console.log('RANKS: ', ranks, 'IMPORTED: ', imported)
+    //             registerNode(context, node, name, 'import', ranks, imported)
+    //         }
+    //     },
+
+    //     'Program:exit': function reportAndReset(): void {
+    //         makeOutOfOrderReport(context, imported)
+
+    //         if (newlineBetweenGroups) {
+    //             makeNewlinesBetweenReport(
+    //                 context,
+    //                 imported,
+    //                 newlineBetweenGroups
+    //             )
+    //         }
+
+    //         imported = []
+    //     },
+
+    //     FunctionDeclaration: incrementLevel,
+    //     FunctionExpression: incrementLevel,
+    //     ArrowFunctionExpression: incrementLevel,
+    //     BlockStatement: incrementLevel,
+    //     ObjectExpression: incrementLevel,
+    //     'FunctionDeclaration:exit': decrementLevel,
+    //     'FunctionExpression:exit': decrementLevel,
+    //     'ArrowFunctionExpression:exit': decrementLevel,
+    //     'BlockStatement:exit': decrementLevel,
+    //     'ObjectExpression:exit': decrementLevel,
+    // }
 }
 
 export default {
