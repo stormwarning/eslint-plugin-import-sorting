@@ -1,3 +1,6 @@
+import { Node, Comment } from 'estree'
+import { SourceCode } from 'eslint'
+
 const NEWLINE = /(\r?\n)/
 
 /**
@@ -53,4 +56,46 @@ export function parseWhitespace(whitespace) {
 
 export function removeBlankLines(whitespace) {
     return printTokens(parseWhitespace(whitespace))
+}
+
+export function getIndentation(
+    node: Node | Comment,
+    sourceCode: SourceCode
+): string {
+    let tokenBefore = sourceCode.getTokenBefore(node, {
+        includeComments: true,
+    })
+
+    if (tokenBefore == null) {
+        let text = sourceCode.text.slice(0, node.range[0])
+        let lines = text.split(NEWLINE)
+
+        return lines[lines.length - 1]
+    }
+
+    let text = sourceCode.text.slice(tokenBefore.range[1], node.range[0])
+    let lines = text.split(NEWLINE)
+
+    return lines.length > 1 ? lines[lines.length - 1] : ''
+}
+
+export function getTrailingSpaces(
+    node: Node | Comment,
+    sourceCode: SourceCode
+): string {
+    let tokenAfter = sourceCode.getTokenAfter(node, {
+        includeComments: true,
+    })
+
+    if (tokenAfter == null) {
+        let text = sourceCode.text.slice(node.range[1])
+        let lines = text.split(NEWLINE)
+
+        return lines[0]
+    }
+
+    let text = sourceCode.text.slice(node.range[1], tokenAfter.range[0])
+    let lines = text.split(NEWLINE)
+
+    return lines[0]
 }

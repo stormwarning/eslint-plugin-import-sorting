@@ -5,8 +5,10 @@ export function isImport(node: Node): boolean {
     return node.type === 'ImportDeclaration'
 }
 
-// import def, { a, b as c, type d } from "A"
-//               ^  ^^^^^^  ^^^^^^
+/**
+ * import def, { a, b as c, type d } from "A"
+ *               ^  ^^^^^^  ^^^^^^
+ */
 export function isImportSpecifier(node: Node): boolean {
     return node.type === 'ImportSpecifier'
 }

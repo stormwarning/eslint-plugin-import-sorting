@@ -1,8 +1,14 @@
-import { Rule, SourceCode } from 'eslint'
+import { Rule, SourceCode, AST } from 'eslint'
 import { ImportDeclaration, Node, Program, Comment } from 'estree'
-import { isImport, isPunctuator } from '../utils/nodes'
+import { isImport, isPunctuator, isImportSpecifier } from '../utils/nodes'
 import determineImportType from '../utils/types'
-import { removeBlankLines } from '../utils'
+import {
+    removeBlankLines,
+    getIndentation,
+    getTrailingSpaces,
+    parseWhitespace,
+} from '../utils'
+import flatMap from '../utils/flatmap'
 
 type GroupName =
     | 'side-effect'
@@ -130,7 +136,7 @@ function commentOnSameLineAs(node) {
         token.loc.end.line === node.loc.end.line
 }
 
-function findStartOfLineWithComments(sourceCode, node) {
+function findStartOfLineWithComments(sourceCode, node): number {
     let tokensToEndOfLine = takeTokensBeforeWhile(
         sourceCode,
         node,
@@ -153,7 +159,7 @@ function findStartOfLineWithComments(sourceCode, node) {
     return result
 }
 
-function findEndOfLineWithComments(sourceCode, node) {
+function findEndOfLineWithComments(sourceCode, node): number {
     let tokensToEndOfLine = takeTokensAfterWhile(
         sourceCode,
         node,
@@ -377,7 +383,7 @@ function convertGroupsToRanks(groups) {
     }, rankObject)
 }
 
-function fixNewLineAfterImport(context, previousImport) {
+function fixNewLineAfterImport(context, previousImport): Function {
     let prevRoot = findRootNode(previousImport.node)
     let tokensToEndOfLine = takeTokensAfterWhile(
         context.getSourceCode(),
@@ -390,21 +396,25 @@ function fixNewLineAfterImport(context, previousImport) {
         endOfLine = tokensToEndOfLine[tokensToEndOfLine.length - 1].range[1]
     }
 
-    return (fixer) =>
+    return (fixer: Rule.RuleFixer): Rule.Fix =>
         fixer.insertTextAfterRange([prevRoot.range[0], endOfLine], '\n')
 }
 
-function removeNewLineAfterImport(context, currentImport, previousImport) {
+function removeNewLineAfterImport(
+    context,
+    currentImport,
+    previousImport
+): Function | undefined {
     let sourceCode = context.getSourceCode()
     let prevRoot = findRootNode(previousImport.node)
     let currRoot = findRootNode(currentImport.node)
-    let range = [
+    let range: [number, number] = [
         findEndOfLineWithComments(sourceCode, prevRoot),
         findStartOfLineWithComments(sourceCode, currRoot),
     ]
 
     if (/^\s*$/.test(sourceCode.text.substring(range[0], range[1]))) {
-        return (fixer) => fixer.removeRange(range)
+        return (fixer: Rule.RuleFixer): Rule.Fix => fixer.removeRange(range)
     }
 
     return undefined
@@ -475,7 +485,7 @@ function makeNewlinesBetweenReport(context, imported, newlinesBetweenImports) {
     })
 }
 
-function collectNodes(node: Program): Array<Node> {
+function collectNodes(node: Program): Node[] {
     let chunks = []
     let imports = []
 
@@ -567,10 +577,178 @@ function printCommentsBefore(
         .join('')
 }
 
+/**
+ * `comments` is a list of comments that occur after `node`. Print those and
+ * the whitespace between themselves and between `node`.
+ */
+function printCommentsAfter(
+    node: Node,
+    comments: Comment[],
+    sourceCode: SourceCode
+): string {
+    return comments
+        .map((comment, index) => {
+            let previous = index === 0 ? node : comments[index - 1]
+
+            return (
+                removeBlankLines(
+                    sourceCode.text.slice(previous.range[1], comment.range[0])
+                ) + sourceCode.getText(comment)
+            )
+        })
+        .join('')
+}
+
+/**
+ * Returns `sourceCode.getTokens(node)` plus whitespace and comments. All tokens
+ * have a `code` property with `sourceCode.getText(token)`.
+ */
+function getAllTokens(node, sourceCode: SourceCode): AST.Token[] {
+    let tokens = sourceCode.getTokens(node)
+    let lastTokenIndex = tokens.length - 1
+
+    return flatMap(tokens, (token, tokenIndex) => {
+        let newToken = Object.assign({}, token, {
+            code: sourceCode.getText(token),
+        })
+
+        if (tokenIndex === lastTokenIndex) {
+            return [newToken]
+        }
+
+        let comments = sourceCode.getCommentsAfter(token)
+        let last = comments.length > 0 ? comments[comments.length - 1] : token
+        let nextToken = tokens[tokenIndex + 1]
+
+        return [
+            newToken,
+            ...flatMap(comments, (comment, commentIndex) => {
+                let previous =
+                    commentIndex === 0 ? token : comments[commentIndex - 1]
+
+                return [
+                    ...parseWhitespace(
+                        sourceCode.text.slice(
+                            previous.range[1],
+                            comment.range[0]
+                        )
+                    ),
+                    Object.assign({}, comment, {
+                        code: sourceCode.getText(comment),
+                    }),
+                ]
+            }),
+            ...parseWhitespace(
+                sourceCode.text.slice(last.range[1], nextToken.range[0])
+            ),
+        ]
+    })
+}
+
+function printSortedSpecifiers(
+    importNode: ImportDeclaration,
+    sourceCode: SourceCode
+) {
+    let allTokens = getAllTokens(importNode, sourceCode)
+    let openBraceIndex = allTokens.findIndex((token) =>
+        isPunctuator(token, '{')
+    )
+    let closeBraceIndex = allTokens.findIndex((token) =>
+        isPunctuator(token, '}')
+    )
+
+    // Exclude "ImportDefaultSpecifier" – the "def" in `import def, {a, b}`.
+    let specifiers = importNode.specifiers.filter((node) =>
+        isImportSpecifier(node)
+    )
+
+    if (
+        openBraceIndex === -1 ||
+        closeBraceIndex === -1 ||
+        specifiers.length <= 1
+    ) {
+        return printTokens(allTokens)
+    }
+
+    let specifierTokens = allTokens.slice(openBraceIndex + 1, closeBraceIndex)
+    let itemsResult = getSpecifierItems(specifierTokens, sourceCode)
+
+    let items = itemsResult.items.map((originalItem, index) =>
+        Object.assign({}, originalItem, { node: specifiers[index] })
+    )
+
+    let sortedItems = sortSpecifierItems(items)
+    let newline = guessNewline(sourceCode)
+
+    // `allTokens[closeBraceIndex - 1]` wouldn’t work because `allTokens` contains
+    // comments and whitespace.
+    let hasTrailingComma = isPunctuator(
+        sourceCode.getTokenBefore(allTokens[closeBraceIndex]),
+        ','
+    )
+
+    let lastIndex = sortedItems.length - 1
+    let sorted = flatMap(sortedItems, (item, index) => {
+        let previous = index === 0 ? undefined : sortedItems[index - 1]
+
+        // Add a newline if the item needs one, unless the previous item (if any)
+        // already ends with a newline.
+        let maybeNewline =
+            previous != null &&
+            needsStartingNewline(item.before) &&
+            !(
+                previous.after.length > 0 &&
+                isNewline(previous.after[previous.after.length - 1])
+            )
+                ? [{ type: 'Newline', code: newline }]
+                : []
+
+        if (index < lastIndex || hasTrailingComma) {
+            return [
+                ...maybeNewline,
+                ...item.before,
+                ...item.specifier,
+                { type: 'Comma', code: ',' },
+                ...item.after,
+            ]
+        }
+
+        let nonBlankIndex = item.after.findIndex(
+            (token) => !isNewline(token) && !isSpaces(token)
+        )
+
+        // Remove whitespace and newlines at the start of `.after` if the item had a
+        // comma before, but now hasn’t to avoid blank lines and excessive
+        // whitespace before `}`.
+        let after = !item.hadComma
+            ? item.after
+            : nonBlankIndex === -1
+            ? []
+            : item.after.slice(nonBlankIndex)
+
+        return [...maybeNewline, ...item.before, ...item.specifier, ...after]
+    })
+
+    let maybeNewline =
+        needsStartingNewline(itemsResult.after) &&
+        !isNewline(sorted[sorted.length - 1])
+            ? [{ type: 'Newline', code: newline }]
+            : []
+
+    return printTokens([
+        ...allTokens.slice(0, openBraceIndex + 1),
+        ...itemsResult.before,
+        ...sorted,
+        ...maybeNewline,
+        ...itemsResult.after,
+        ...allTokens.slice(closeBraceIndex),
+    ])
+}
+
 function getImportItems(
     importItems: ImportDeclaration[],
     sourceCode: SourceCode
-) {
+): ImportDeclWithExtras[] {
     let imports = handleLastSemicolon(importItems, sourceCode)
 
     return imports.map((importNode: ImportDeclaration, importIndex) => {
@@ -637,6 +815,7 @@ function getImportItems(
         let [, end] = all[all.length - 1].range
         let source = getSource(importNode)
 
+        /** @todo Make this into a custom Type. */
         return {
             node: importNode,
             code,
@@ -679,7 +858,7 @@ function create(context: Rule.RuleContext): Rule.RuleListener {
     let ranks
 
     return {
-        Program: (node): void => {
+        Program: (node: Program): void => {
             let groups
 
             for (let imports of collectNodes(node)) {
