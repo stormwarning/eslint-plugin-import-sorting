@@ -33,15 +33,17 @@ export function isSpaces(node): boolean {
     return node.type === 'Spaces'
 }
 
-export function isNewline(node: Node): boolean {
+export function isNewline(node): boolean {
     return node.type === 'Newline'
 }
 
-// import "setup"
-// But not: import {} from "setup"
-// And not: import type {} from "setup"
+/**
+ * import "setup"
+ * But not: import {} from "setup"
+ * And not: import type {} from "setup"
+ */
 export function isSideEffectImport(
-    importNode: ImportDeclaration,
+    importNode,
     sourceCode: SourceCode
 ): boolean {
     return (
