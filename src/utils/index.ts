@@ -1,7 +1,13 @@
 import { Node, Comment } from 'estree'
 import { SourceCode } from 'eslint'
+import { isSpaces } from './nodes'
 
 const NEWLINE = /(\r?\n)/
+
+export function endsWithSpaces(tokens) {
+    let last = tokens.length > 0 ? tokens[tokens.length - 1] : undefined
+    return last == null ? false : isSpaces(last)
+}
 
 /**
  * Prints tokens that are enhanced with a `code` property – like those returned

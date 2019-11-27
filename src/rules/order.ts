@@ -1,14 +1,29 @@
 import { Rule, SourceCode, AST } from 'eslint'
 import { ImportDeclaration, Node, Program, Comment } from 'estree'
-import { isImport, isPunctuator, isImportSpecifier } from '../utils/nodes'
+import {
+    isImport,
+    isPunctuator,
+    isImportSpecifier,
+    isNewline,
+    isBlockComment,
+    isIdentifier,
+    isSpaces,
+    isLineComment,
+    isSideEffectImport,
+} from '../utils/nodes'
 import determineImportType from '../utils/types'
 import {
     removeBlankLines,
     getIndentation,
     getTrailingSpaces,
     parseWhitespace,
+    printTokens,
+    hasNewline,
+    endsWithSpaces,
+    guessNewline,
 } from '../utils'
-import flatMap from '../utils/flatmap'
+import { flatMap, findLastIndex } from '../utils/arrays'
+import { sortSpecifierItems, getSource } from '../utils/sorting'
 
 type GroupName =
     | 'side-effect'
@@ -645,6 +660,267 @@ function getAllTokens(node, sourceCode: SourceCode): AST.Token[] {
     })
 }
 
+function makeEmptyItem() {
+    return {
+        // "before" | "specifier" | "after"
+        state: 'before',
+        before: [],
+        after: [],
+        specifier: [],
+        hadComma: false,
+    }
+}
+
+/**
+ * Turns a list of tokens between the `{` and `}` of an import specifiers list
+ * into an object with the following properties:
+ *
+ * - before: Array of tokens – whitespace and comments after the `{` that do not
+ *   belong to any specifier.
+ * - after: Array of tokens – whitespace and comments before the `}` that do not
+ *   belong to any specifier.
+ * - items: Array of specifier items.
+ *
+ * Each specifier item looks like this:
+ *
+ * - before: Array of tokens – whitespace and comments before the specifier.
+ * - after: Array of tokens – whitespace and comments after the specifier.
+ * - specifier: Array of tokens – identifiers, whitespace and comments of the
+ *   specifier.
+ * - hadComma: A Boolean representing if the specifier had a comma originally.
+ *
+ * We have to do carefully preserve all original whitespace this way in order to
+ * be compatible with other stylistic ESLint rules.
+ */
+function getSpecifierItems(tokens) {
+    let result = {
+        before: [],
+        after: [],
+        items: [],
+    }
+
+    let current = makeEmptyItem()
+
+    for (let token of tokens) {
+        switch (current.state) {
+            case 'before':
+                switch (token.type) {
+                    case 'Newline':
+                        current.before.push(token)
+
+                        /**
+                         * All whitespace and comments before the first newline
+                         * or identifier belong to the `{`, not the first
+                         * specifier.
+                         */
+                        if (
+                            result.before.length === 0 &&
+                            result.items.length === 0
+                        ) {
+                            result.before = current.before
+                            current = makeEmptyItem()
+                        }
+
+                        break
+
+                    case 'Spaces':
+                    case 'Block':
+                    case 'Line':
+                        current.before.push(token)
+                        break
+
+                    // We’ve reached an identifier.
+                    default:
+                        /**
+                         * All whitespace and comments before the first newline
+                         * or identifier belong to the `{`, not the first
+                         * specifier.
+                         */
+                        if (
+                            result.before.length === 0 &&
+                            result.items.length === 0
+                        ) {
+                            result.before = current.before
+                            current = makeEmptyItem()
+                        }
+
+                        current.state = 'specifier'
+                        current.specifier.push(token)
+                }
+                break
+
+            case 'specifier':
+                switch (token.type) {
+                    case 'Punctuator':
+                        /**
+                         * There can only be comma punctuators, but future-proof
+                         * by checking.
+                         */
+                        // istanbul ignore else
+                        if (isPunctuator(token, ',')) {
+                            current.hadComma = true
+                            current.state = 'after'
+                        } else {
+                            current.specifier.push(token)
+                        }
+                        break
+
+                    /**
+                     * When consuming the specifier part, we eat every token
+                     * until a comma or to the end, basically.
+                     */
+                    default:
+                        current.specifier.push(token)
+                }
+                break
+
+            case 'after':
+                switch (token.type) {
+                    /**
+                     * Only whitespace and comments after a specifier that are
+                     * on the same belong to the specifier.
+                     */
+                    case 'Newline':
+                        current.after.push(token)
+                        result.items.push(current)
+                        current = makeEmptyItem()
+                        break
+
+                    case 'Spaces':
+                    case 'Line':
+                        current.after.push(token)
+                        break
+
+                    case 'Block':
+                        // Multiline block comments belong to the next specifier.
+                        if (hasNewline(token.code)) {
+                            result.items.push(current)
+                            current = makeEmptyItem()
+                            current.before.push(token)
+                        } else {
+                            current.after.push(token)
+                        }
+                        break
+
+                    // We’ve reached another specifier – time to process it.
+                    default:
+                        result.items.push(current)
+                        current = makeEmptyItem()
+                        current.state = 'specifier'
+                        current.specifier.push(token)
+                }
+                break
+
+            // istanbul ignore next
+            default:
+                throw new Error(`Unknown state: ${current.state}`)
+        }
+    }
+
+    // We’ve reached the end of the tokens. Handle what’s currently in `current`.
+    switch (current.state) {
+        /**
+         * If the last specifier has a trailing comma and some of the remaining
+         * whitespace and comments are on the same line we end up here. If so we
+         * want to put that whitespace and comments in `result.after`.
+         */
+        case 'before':
+            result.after = current.before
+            break
+
+        /**
+         * If the last specifier has no trailing comma we end up here. Move all
+         * trailing comments and whitespace from `.specifier` to `.after`, and
+         * comments and whitespace that don’t belong to the specifier to
+         * `result.after`.
+         */
+        case 'specifier': {
+            let lastIdentifierIndex = findLastIndex(
+                current.specifier,
+                (token2) => isIdentifier(token2)
+            )
+
+            let specifier = current.specifier.slice(0, lastIdentifierIndex + 1)
+            let after = current.specifier.slice(lastIdentifierIndex + 1)
+
+            /**
+             * If there’s a newline, put everything up to and including (hence
+             * the `+ 1`) that newline in the specifiers’s `.after`.
+             */
+            let newlineIndexRaw = after.findIndex((token2) => isNewline(token2))
+            let newlineIndex = newlineIndexRaw === -1 ? -1 : newlineIndexRaw + 1
+
+            /**
+             * If there’s a multiline block comment, put everything _before_
+             * that comment in the specifiers’s `.after`.
+             */
+            let multilineBlockCommentIndex = after.findIndex(
+                (token2) => isBlockComment(token2) && hasNewline(token2.code)
+            )
+
+            let sliceIndex =
+                // If both a newline and a multiline block comment exists, choose the
+                // earlier one.
+                newlineIndex >= 0 && multilineBlockCommentIndex >= 0
+                    ? Math.min(newlineIndex, multilineBlockCommentIndex)
+                    : newlineIndex >= 0
+                    ? newlineIndex
+                    : multilineBlockCommentIndex >= 0
+                    ? multilineBlockCommentIndex
+                    : // If there are no newlines, move the last whitespace into `result.after`.
+                    endsWithSpaces(after)
+                    ? after.length - 1
+                    : -1
+
+            current.specifier = specifier
+            current.after =
+                sliceIndex === -1 ? after : after.slice(0, sliceIndex)
+            result.items.push(current)
+            result.after = sliceIndex === -1 ? [] : after.slice(sliceIndex)
+
+            break
+        }
+
+        /**
+         * If the last specifier has a trailing comma and all remaining
+         * whitespace and comments are on the same line we end up here. If so we
+         * want to move the final whitespace to `result.after`.
+         */
+        case 'after':
+            if (endsWithSpaces(current.after)) {
+                let last = current.after.pop()
+                result.after = [last]
+            }
+
+            result.items.push(current)
+            break
+
+        // istanbul ignore next
+        default:
+            throw new Error(`Unknown state: ${current.state}`)
+    }
+
+    return result
+}
+
+/**
+ * If a specifier item starts with a line comment or a singleline block comment
+ * it needs a newline before that. Otherwise that comment can end up belonging
+ * to the _previous_ import specifier after sorting.
+ */
+function needsStartingNewline(tokens) {
+    let before = tokens.filter((token) => !isSpaces(token))
+
+    if (before.length === 0) return false
+
+    let firstToken = before[0]
+
+    return (
+        isLineComment(firstToken) ||
+        (isBlockComment(firstToken) && !hasNewline(firstToken.code))
+    )
+}
+
 function printSortedSpecifiers(
     importNode: ImportDeclaration,
     sourceCode: SourceCode
@@ -671,7 +947,7 @@ function printSortedSpecifiers(
     }
 
     let specifierTokens = allTokens.slice(openBraceIndex + 1, closeBraceIndex)
-    let itemsResult = getSpecifierItems(specifierTokens, sourceCode)
+    let itemsResult = getSpecifierItems(specifierTokens /* sourceCode */)
 
     let items = itemsResult.items.map((originalItem, index) =>
         Object.assign({}, originalItem, { node: specifiers[index] })
