@@ -23,7 +23,11 @@ import {
     guessNewline,
 } from '../utils'
 import { flatMap, findLastIndex } from '../utils/arrays'
-import { sortSpecifierItems, getSource } from '../utils/sorting'
+import {
+    sortSpecifierItems,
+    getSource,
+    sortImportItems,
+} from '../utils/sorting'
 
 type GroupName =
     | 'side-effect'
@@ -573,7 +577,7 @@ function handleLastSemicolon(
  */
 function printCommentsBefore(
     node: Node,
-    comments: Comment[],
+    comments /*: Comment[] */,
     sourceCode: SourceCode
 ): string {
     let lastIndex = comments.length - 1
@@ -598,7 +602,7 @@ function printCommentsBefore(
  */
 function printCommentsAfter(
     node: Node,
-    comments: Comment[],
+    comments /*: Comment[] */,
     sourceCode: SourceCode
 ): string {
     return comments
@@ -1021,10 +1025,11 @@ function printSortedSpecifiers(
     ])
 }
 
+/** @return : ImportDeclWithExtras[] */
 function getImportItems(
     importItems: ImportDeclaration[],
     sourceCode: SourceCode
-): ImportDeclWithExtras[] {
+) {
     let imports = handleLastSemicolon(importItems, sourceCode)
 
     return imports.map((importNode: ImportDeclaration, importIndex) => {
@@ -1105,6 +1110,82 @@ function getImportItems(
                 isLineComment(commentsAfter[commentsAfter.length - 1]),
         }
     })
+}
+
+function printSortedImports(importItems, sourceCode, outerGroups) {
+    let itemGroups = outerGroups.map((groups) =>
+        groups.map((regex) => ({ regex, items: [] }))
+    )
+    let rest = []
+
+    for (let item of importItems) {
+        let { originalSource } = item.source
+        let source = item.isSideEffectImport
+            ? `\0${originalSource}`
+            : originalSource
+        let [matchedGroup] = flatMap(itemGroups, (groups) =>
+            groups.map((group) => [group, group.regex.exec(source)])
+        ).reduce(
+            ([group, longestMatch], [nextGroup, nextMatch]) =>
+                nextMatch != null &&
+                (longestMatch == null ||
+                    nextMatch[0].length > longestMatch[0].length)
+                    ? [nextGroup, nextMatch]
+                    : [group, longestMatch],
+            [undefined, undefined]
+        )
+
+        if (matchedGroup == null) {
+            rest.push(item)
+        } else {
+            matchedGroup.items.push(item)
+        }
+    }
+
+    let sortedItems = itemGroups
+        .concat([[{ regex: /^/, items: rest }]])
+        .map((groups) => groups.filter((group) => group.items.length > 0))
+        .filter((groups) => groups.length > 0)
+        .map((groups) => groups.map((group) => sortImportItems(group.items)))
+
+    let newline = guessNewline(sourceCode)
+
+    let sorted = sortedItems
+        .map((groups) =>
+            groups
+                .map((groupItems) =>
+                    groupItems.map((item) => item.code).join(newline)
+                )
+                .join(newline)
+        )
+        .join(newline + newline)
+
+    /**
+     * Edge case: If the last import (after sorting) ends with a line comment
+     * and there’s code (or a multiline block comment) on the same line, add a
+     * newline so we don’t accidentally comment stuff out.
+     */
+    let flattened = flatMap(sortedItems, (groups) => [].concat(...groups))
+    let lastSortedItem = flattened[flattened.length - 1]
+    let lastOriginalItem = importItems[importItems.length - 1]
+    let nextToken = lastSortedItem.needsNewline
+        ? sourceCode.getTokenAfter(lastOriginalItem.node, {
+              includeComments: true,
+              filter: (token) =>
+                  !isLineComment(token) &&
+                  !(
+                      isBlockComment(token) &&
+                      token.loc.end.line === lastOriginalItem.node.loc.end.line
+                  ),
+          })
+        : undefined
+    let maybeNewline =
+        nextToken != null &&
+        nextToken.loc.start.line === lastOriginalItem.node.loc.end.line
+            ? newline
+            : ''
+
+    return sorted + maybeNewline
 }
 
 function reportImportSorting(imports, context: Rule.RuleContext, groups): void {
