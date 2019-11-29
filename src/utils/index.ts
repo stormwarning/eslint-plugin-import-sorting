@@ -13,7 +13,7 @@ export function endsWithSpaces(tokens) {
  * Prints tokens that are enhanced with a `code` property – like those returned
  * by `getAllTokens` and `parseWhitespace`.
  */
-export function printTokens(tokens) {
+export function printTokens(tokens): string {
     return tokens.map((token) => token.code).join('')
 }
 

@@ -1,3 +1,6 @@
+import { ImportDeclaration } from 'estree'
+import { ImportSource } from '../index.d'
+
 const collator = new Intl.Collator('en', {
     sensitivity: 'base',
     numeric: true,
@@ -15,7 +18,7 @@ export function getImportKind(importNode) {
     return importNode.importKind || '\uffff'
 }
 
-export function getSource(importNode) {
+export function getSource(importNode: ImportDeclaration): ImportSource {
     let source = importNode.source.value
 
     return {
@@ -31,7 +34,7 @@ export function getSource(importNode) {
              */
             source === '.' || source === '..' ? `${source}/` : source,
         originalSource: source,
-        importKind: getImportKind(importNode),
+        // importKind: getImportKind(importNode),
     }
 }
 

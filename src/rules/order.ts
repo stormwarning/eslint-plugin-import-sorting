@@ -28,6 +28,7 @@ import {
     getSource,
     sortImportItems,
 } from '../utils/sorting'
+import { ImportItem } from '../index.d'
 
 type GroupName =
     | 'side-effect'
@@ -504,7 +505,7 @@ function makeNewlinesBetweenReport(context, imported, newlinesBetweenImports) {
     })
 }
 
-function collectNodes(node: Program): Node[] {
+function collectNodes(node: Program): ImportDeclaration[] {
     let chunks = []
     let imports = []
 
@@ -621,6 +622,9 @@ function printCommentsAfter(
 /**
  * Returns `sourceCode.getTokens(node)` plus whitespace and comments. All tokens
  * have a `code` property with `sourceCode.getText(token)`.
+ *
+ * @todo Change the return type to array of AST.Token, Comment, and a new
+ *       `ImportWhitespace` type.
  */
 function getAllTokens(node, sourceCode: SourceCode): AST.Token[] {
     let tokens = sourceCode.getTokens(node)
@@ -928,7 +932,7 @@ function needsStartingNewline(tokens) {
 function printSortedSpecifiers(
     importNode: ImportDeclaration,
     sourceCode: SourceCode
-) {
+): string {
     let allTokens = getAllTokens(importNode, sourceCode)
     let openBraceIndex = allTokens.findIndex((token) =>
         isPunctuator(token, '{')
@@ -1025,14 +1029,13 @@ function printSortedSpecifiers(
     ])
 }
 
-/** @return : ImportDeclWithExtras[] */
 function getImportItems(
     importItems: ImportDeclaration[],
     sourceCode: SourceCode
-) {
+): ImportItem[] {
     let imports = handleLastSemicolon(importItems, sourceCode)
 
-    return imports.map((importNode: ImportDeclaration, importIndex) => {
+    return imports.map((importNode, importIndex) => {
         let lastLine =
             importIndex === 0
                 ? importNode.loc.start.line - 1
@@ -1045,21 +1048,25 @@ function getImportItems(
          *   that are on the same line as the previous import. But multiline
          *   block comments always belong to this import, not the previous.
          */
-        let commentsBefore = importNode.leadingComments.filter(
-            (comment) =>
-                comment.loc.start.line <= importNode.loc.start.line &&
-                comment.loc.end.line > lastLine &&
-                (importIndex > 0 || comment.loc.start.line > lastLine)
-        )
+        let commentsBefore = sourceCode
+            .getCommentsBefore(importNode)
+            .filter(
+                (comment) =>
+                    comment.loc.start.line <= importNode.loc.start.line &&
+                    comment.loc.end.line > lastLine &&
+                    (importIndex > 0 || comment.loc.start.line > lastLine)
+            )
 
         /**
          * Get all comments after the import that are on the same line.
          * Multiline block comments belong to the *next* import (or the
          * following code if it's the last import).
          */
-        let commentsAfter = importNode.trailingComments.filter(
-            (comment) => comment.loc.end.line === importNode.loc.end.line
-        )
+        let commentsAfter = sourceCode
+            .getCommentsAfter(importNode)
+            .filter(
+                (comment) => comment.loc.end.line === importNode.loc.end.line
+            )
 
         let before = printCommentsBefore(importNode, commentsBefore, sourceCode)
         let after = printCommentsAfter(importNode, commentsAfter, sourceCode)
@@ -1096,7 +1103,6 @@ function getImportItems(
         let [, end] = all[all.length - 1].range
         let source = getSource(importNode)
 
-        /** @todo Make this into a custom Type. */
         return {
             node: importNode,
             code,
@@ -1112,7 +1118,11 @@ function getImportItems(
     })
 }
 
-function printSortedImports(importItems, sourceCode, outerGroups) {
+function printSortedImports(
+    importItems: ImportItem[],
+    sourceCode,
+    outerGroups
+): string {
     let itemGroups = outerGroups.map((groups) =>
         groups.map((regex) => ({ regex, items: [] }))
     )
@@ -1120,7 +1130,7 @@ function printSortedImports(importItems, sourceCode, outerGroups) {
 
     for (let item of importItems) {
         let { originalSource } = item.source
-        let source = item.isSideEffectImport
+        let source = item.hasSideEffects
             ? `\0${originalSource}`
             : originalSource
         let [matchedGroup] = flatMap(itemGroups, (groups) =>
@@ -1188,7 +1198,11 @@ function printSortedImports(importItems, sourceCode, outerGroups) {
     return sorted + maybeNewline
 }
 
-function reportImportSorting(imports, context: Rule.RuleContext, groups): void {
+function reportImportSorting(
+    imports: ImportDeclaration[],
+    context: Rule.RuleContext,
+    groups
+): void {
     let sourceCode = context.getSourceCode()
     let items = getImportItems(imports, sourceCode)
     let sortedItems = printSortedImports(items, sourceCode, groups)
@@ -1216,11 +1230,24 @@ function create(context: Rule.RuleContext): Rule.RuleListener {
 
     return {
         Program: (node: Program): void => {
-            let groups
+            let groups = [
+                // Side effect imports.
+                ['^\\u0000'],
+                // Packages.
+                // Things that start with a letter (or digit or underscore), or `@` followed by a letter.
+                ['^@?\\w'],
+                // Absolute imports and other imports such as Vue-style `@/foo`.
+                // Anything that does not start with a dot.
+                ['^[^.]'],
+                // Relative imports.
+                // Anything that starts with a dot.
+                ['^\\.'],
+            ]
+            let imports = collectNodes(node)
 
-            for (let imports of collectNodes(node)) {
-                reportImportSorting(imports, context, groups)
-            }
+            // for (let imports of collectNodes(node)) {
+            reportImportSorting(imports, context, groups)
+            // }
         },
     }
 
