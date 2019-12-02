@@ -1,6 +1,7 @@
 import { Node, Comment } from 'estree'
 import { SourceCode } from 'eslint'
 import { isSpaces } from './nodes'
+import { ImportWhitespace } from '../index.d'
 
 const NEWLINE = /(\r?\n)/
 
@@ -26,7 +27,7 @@ export function guessNewline(sourceCode) {
     return match == null ? '\n' : match[0]
 }
 
-export function parseWhitespace(whitespace) {
+export function parseWhitespace(whitespace: string): ImportWhitespace[] {
     let allItems = whitespace.split(NEWLINE)
 
     /**

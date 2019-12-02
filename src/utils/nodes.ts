@@ -1,5 +1,7 @@
-import { Node, ImportDeclaration, Comment } from 'estree'
-import { SourceCode, AST } from 'eslint'
+import { SourceCode } from 'eslint'
+import { Comment, Node } from 'estree'
+
+import { ImportToken } from '../index.d'
 
 export function isImport(node: Node): boolean {
     return node.type === 'ImportDeclaration'
@@ -17,7 +19,7 @@ export function isIdentifier(node: Node): boolean {
     return node.type === 'Identifier'
 }
 
-export function isPunctuator(node: AST.Token, value: string): boolean {
+export function isPunctuator(node: ImportToken, value: string): boolean {
     return node.type === 'Punctuator' && node.value === value
 }
 

@@ -28,7 +28,7 @@ import {
     getSource,
     sortImportItems,
 } from '../utils/sorting'
-import { ImportItem } from '../index.d'
+import { ImportItem, ImportWhitespace, ImportToken } from '../index.d'
 
 type GroupName =
     | 'side-effect'
@@ -626,7 +626,7 @@ function printCommentsAfter(
  * @todo Change the return type to array of AST.Token, Comment, and a new
  *       `ImportWhitespace` type.
  */
-function getAllTokens(node, sourceCode: SourceCode): AST.Token[] {
+function getAllTokens(node, sourceCode: SourceCode): ImportToken[] {
     let tokens = sourceCode.getTokens(node)
     let lastTokenIndex = tokens.length - 1
 
