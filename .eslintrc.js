@@ -14,7 +14,7 @@ module.exports = {
         'eslint-plugin',
         'filenames',
         // 'import',
-        'isort',
+        // 'isort',
         // 'node',
     ],
     extends: [
@@ -34,6 +34,6 @@ module.exports = {
             { multiline: { delimiter: 'none' } },
         ],
 
-        'isort/order': 'error',
+        // 'isort/order': 'error',
     },
 }
