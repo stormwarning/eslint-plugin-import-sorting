@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    // Type Checking
+    "strictNullChecks": true,
+
+    // Modules
+    "module": "esnext",
+    "moduleResolution": "node",
+
+    // JavaScript Support
+    "allowJs": true,
+    "checkJs": true,
+
+    // Interop Constraints
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+
+    // Language and Environment
+    "outDir": "dist",
+    "target": "esnext",
+
+    // Projects
+    "incremental": true,
+
+    // Completeness
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules", "dist"]
+}
