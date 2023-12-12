@@ -1,6 +1,14 @@
 {
   "name": "eslint-plugin-isort",
   "version": "0.0.0",
+  "description": "ESLint plugin to group and sort imports by module, à la Python isort",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "import",
+    "order",
+    "sort"
+  ],
   "repository": "stormwarning/eslint-plugin-isort",
   "author": "Jeff (https://tidaltheory.io)",
   "type": "module",
