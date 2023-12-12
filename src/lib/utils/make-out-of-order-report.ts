@@ -74,7 +74,7 @@ function fixOutOfOrder(
 ) {
 	let { sourceCode } = context
 
-	let firstRoot = findRootNode(firstNode?.node)
+	let firstRoot = findRootNode(firstNode.node)
 	let firstRootStart = findStartOfLineWithComments(sourceCode, firstRoot)
 	let firstRootEnd = findEndOfLineWithComments(sourceCode, firstRoot)
 
