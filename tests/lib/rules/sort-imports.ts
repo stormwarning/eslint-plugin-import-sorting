@@ -7,6 +7,10 @@ const ruleTester = new RuleTester({
 		sourceType: 'module',
 		ecmaVersion: 6,
 	},
+	settings: {
+		'isort/known-framework': /^react(\/|-dom|-router|$)/,
+		'isort/known-first-party': /^~/,
+	},
 })
 
 ruleTester.run('sort-imports', sortImportsRule, {
@@ -18,9 +22,14 @@ ruleTester.run('sort-imports', sortImportsRule, {
 
 				import fs from 'node:fs'
 
+				import { useState } from 'react'
+
 				import { x, y, z } from '@scope/package'
 				import { a, b, c } from 'package'
 				import Thing, { method } from 'package/path'
+				import flatten from 'react-keyed-flatten-children'
+
+				import { Component } from '~/components'
 
 				import moduleB from '../../../module-b.js'
 				import moduleD from '../../module-d.js'
@@ -46,6 +55,7 @@ ruleTester.run('sort-imports', sortImportsRule, {
 			`,
 			errors: [{ message: '`package` import should occur before import of `package/path`' }],
 		},
+
 		// It groups built-in modules separately.
 		{
 			filename: 'module.js',
@@ -63,6 +73,36 @@ ruleTester.run('sort-imports', sortImportsRule, {
 				{ message: 'There should be at least one empty line between import groups' },
 				{ message: '`node:fs` import should occur before import of `@scope/package`' },
 			],
+		},
+
+		// It groups framework modules separately.
+		{
+			filename: 'module.js',
+			code: `
+				import { useState } from 'react'
+				import flatten from 'react-keyed-flatten-children'
+			`,
+			output: `
+				import { useState } from 'react'
+
+				import flatten from 'react-keyed-flatten-children'
+			`,
+			errors: [{ message: 'There should be at least one empty line between import groups' }],
+		},
+
+		// It groups first-party modules separately.
+		{
+			filename: 'module.js',
+			code: `
+				import A from 'package'
+				import B from '~/components'
+			`,
+			output: `
+				import A from 'package'
+
+				import B from '~/components'
+			`,
+			errors: [{ message: 'There should be at least one empty line between import groups' }],
 		},
 
 		/**
@@ -89,6 +129,7 @@ ruleTester.run('sort-imports', sortImportsRule, {
 				},
 			],
 		},
+
 		// It sorts specifiers alphabetically.
 		// {
 		// 	filename: 'module.js',
