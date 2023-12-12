@@ -17,7 +17,7 @@
     "build": "vite build",
     "changeset": "changeset add",
     "prepare": "husky install",
-    "release": "pnpm run build && changeset publish",
+    "release": "npm run build && changeset publish",
     "test": "vitest run",
     "update:eslint-docs": "eslint-doc-generator"
   },
