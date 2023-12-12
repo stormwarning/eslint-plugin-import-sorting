@@ -27,7 +27,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: pnpm build
+        run: npm run build
 
       # https://github.com/changesets/action
       - name: Create release PR or publish to npm
