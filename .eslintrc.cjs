@@ -30,7 +30,7 @@ const config = {
 	rules: {
 		'import/extensions': [
 			'error',
-			'always',
+			'ignorePackages',
 			{
 				pattern: {
 					ts: 'never',
@@ -41,6 +41,8 @@ const config = {
 		'import/order': 'off',
 
 		'isort/sort-imports': 'error',
+
+		'unicorn/no-array-reduce': 'off',
 	},
 	overrides: [
 		{
