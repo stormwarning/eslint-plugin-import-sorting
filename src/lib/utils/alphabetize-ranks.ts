@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import groupBy from 'object.groupby'
 
-import type { ImportNodeObject } from '../rules/sort-imports'
+import type { ImportNodeObject } from '../rules/order'
 
 type OrderDirection = 'asc' | 'desc'
 

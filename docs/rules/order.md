@@ -1,4 +1,4 @@
-# import-sorting/sort-imports
+# import-sorting/order
 
 🔧 This rule is automatically fixable by the [`--fix` CLI option](https://eslint.org/docs/latest/user-guide/command-line-interface#--fix).
 
@@ -18,6 +18,6 @@ settings: {
 	'import-sorting/known-first-party': /^~/,
 },
 rules: {
-	'import-sorting/sort-import': 'error',
+	'import-sorting/order': 'error',
 },
 ```

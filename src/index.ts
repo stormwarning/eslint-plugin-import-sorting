@@ -1,8 +1,8 @@
-import { sortImports } from './lib/rules/sort-imports'
+import { orderRule } from './lib/rules/order'
 
 const plugin = {
 	rules: {
-		'sort-imports': sortImports,
+		order: orderRule,
 	},
 }
 

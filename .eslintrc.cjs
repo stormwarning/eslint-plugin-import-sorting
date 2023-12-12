@@ -40,7 +40,7 @@ const config = {
 
 		'import/order': 'off',
 
-		'import-sorting/sort-imports': 'error',
+		'import-sorting/order': 'error',
 
 		'unicorn/no-array-reduce': 'off',
 	},

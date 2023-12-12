@@ -1,6 +1,6 @@
 import type { Rule } from 'eslint'
 
-import type { ImportNodeObject } from '../rules/sort-imports'
+import type { ImportNodeObject } from '../rules/order'
 import { findEndOfLineWithComments, findStartOfLineWithComments } from './find-comment'
 import { findRootNode } from './find-root-node'
 

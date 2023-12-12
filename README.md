@@ -14,8 +14,8 @@ This plugin includes an additional group for “style” imports where the impor
 
 ```js
 rules: {
-	'import-sorting/sort-imports': 'error',
+	'import-sorting/order': 'error',
 }
 ```
 
-See the [sort-imports](https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/sort-imports.md) docs for more configuration options.
+See the [order](https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/order.md) rule docs for more configuration options.

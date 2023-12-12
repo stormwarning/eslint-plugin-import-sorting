@@ -1,6 +1,6 @@
 import type { AST, Rule } from 'eslint'
 
-import type { ImportNodeObject } from '../rules/sort-imports'
+import type { ImportNodeObject } from '../rules/order'
 import {
 	commentOnSameLineAs,
 	findEndOfLineWithComments,

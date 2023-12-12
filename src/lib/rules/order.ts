@@ -109,13 +109,13 @@ function convertGroupsToRanks(groups: typeof IMPORT_GROUPS) {
 	return { groups: ranks, omittedTypes }
 }
 
-export const sortImports: Rule.RuleModule = {
+export const orderRule: Rule.RuleModule = {
 	meta: {
 		type: 'layout',
 		fixable: 'code',
 		docs: {
 			description: 'Enforce a convention in the order of `import` statements.',
-			url: 'https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/sort-imports.md',
+			url: 'https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/order.md',
 		},
 		schema: [
 			{

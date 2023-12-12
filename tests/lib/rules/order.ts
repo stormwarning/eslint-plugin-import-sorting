@@ -1,6 +1,6 @@
 import { RuleTester } from 'eslint'
 
-import { sortImports as sortImportsRule } from '../../../src/lib/rules/sort-imports'
+import { orderRule } from '../../../src/lib/rules/order'
 
 const ruleTester = new RuleTester({
 	parserOptions: {
@@ -13,7 +13,7 @@ const ruleTester = new RuleTester({
 	},
 })
 
-ruleTester.run('sort-imports', sortImportsRule, {
+ruleTester.run('order', orderRule, {
 	valid: [
 		{
 			filename: 'module.js',
