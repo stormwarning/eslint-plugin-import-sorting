@@ -113,12 +113,16 @@ export const sortImports: Rule.RuleModule = {
 	meta: {
 		type: 'layout',
 		fixable: 'code',
-	},
-	schema: [
-		{
-			type: 'object',
+		docs: {
+			description: 'Enforce a convention in the order of `import` statements.',
+			url: 'https://github.com/stormwarning/eslint-plugin-isort/blob/main/docs/rules/sort-imports.md',
 		},
-	],
+		schema: [
+			{
+				type: 'object',
+			},
+		],
+	},
 	create(context) {
 		let importMap: Map<Rule.Node, Array<ImportNodeObject>> = new Map()
 		let { groups, omittedTypes } = convertGroupsToRanks(IMPORT_GROUPS)

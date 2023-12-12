@@ -6,7 +6,9 @@
     "eslint",
     "eslint-plugin",
     "import",
+    "isort",
     "order",
+    "python",
     "sort"
   ],
   "repository": "stormwarning/eslint-plugin-isort",

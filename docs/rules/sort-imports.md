@@ -1,5 +1,23 @@
-# Sort imports (`sort-imports`)
+# isort/sort-imports
 
-## Rule details
+🔧 This rule is automatically fixable by the [`--fix` CLI option](https://eslint.org/docs/latest/user-guide/command-line-interface#--fix).
 
-## Options
+Enforce a convention in the order of `import` statements.
+
+## Settings
+
+The framework and first-party groups can be configured by passing a string or RegEx pattern to the different plugin setting. This allows the rule itself to be implemented by a shared config, while individual projects can determine what constitutes a “first-party” module.
+
+For example:
+
+```js
+settings: {
+	// Group official React packages together.
+	'isort/known-framework': /^react(\/|-dom|-router|$)/,
+	// Group aliased imports together.
+	'isort/known-first-party': /^~/,
+},
+rules: {
+	'isort/sort-import': 'error',
+},
+```
