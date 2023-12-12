@@ -36,8 +36,8 @@ function isStyle(name: string) {
 }
 
 export function resolveImportGroup(name: string, context: Rule.RuleContext) {
-	let knownFramework = context.settings['isort/known-framework'] as string
-	let knownFirstParty = context.settings['isort/known-first-party'] as string
+	let knownFramework = context.settings['import-sorting/known-framework'] as string
+	let knownFirstParty = context.settings['import-sorting/known-first-party'] as string
 
 	if (isBuiltin(name)) return 'builtin'
 	if (isStyle(name)) return 'style'

@@ -9,7 +9,7 @@ const config = {
 	parserOptions: {
 		ecmaVersion: 2021,
 	},
-	plugins: ['isort'],
+	plugins: ['import-sorting'],
 	settings: {
 		'import/resolver': {
 			node: {
@@ -40,7 +40,7 @@ const config = {
 
 		'import/order': 'off',
 
-		'isort/sort-imports': 'error',
+		'import-sorting/sort-imports': 'error',
 
 		'unicorn/no-array-reduce': 'off',
 	},

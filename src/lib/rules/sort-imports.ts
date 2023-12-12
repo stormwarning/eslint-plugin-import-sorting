@@ -115,7 +115,7 @@ export const sortImports: Rule.RuleModule = {
 		fixable: 'code',
 		docs: {
 			description: 'Enforce a convention in the order of `import` statements.',
-			url: 'https://github.com/stormwarning/eslint-plugin-isort/blob/main/docs/rules/sort-imports.md',
+			url: 'https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/sort-imports.md',
 		},
 		schema: [
 			{

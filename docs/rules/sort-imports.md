@@ -1,4 +1,4 @@
-# isort/sort-imports
+# import-sorting/sort-imports
 
 🔧 This rule is automatically fixable by the [`--fix` CLI option](https://eslint.org/docs/latest/user-guide/command-line-interface#--fix).
 
@@ -13,11 +13,11 @@ For example:
 ```js
 settings: {
 	// Group official React packages together.
-	'isort/known-framework': /^react(\/|-dom|-router|$)/,
+	'import-sorting/known-framework': /^react(\/|-dom|-router|$)/,
 	// Group aliased imports together.
-	'isort/known-first-party': /^~/,
+	'import-sorting/known-first-party': /^~/,
 },
 rules: {
-	'isort/sort-import': 'error',
+	'import-sorting/sort-import': 'error',
 },
 ```

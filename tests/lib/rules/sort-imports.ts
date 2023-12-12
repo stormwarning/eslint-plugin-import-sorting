@@ -8,8 +8,8 @@ const ruleTester = new RuleTester({
 		ecmaVersion: 6,
 	},
 	settings: {
-		'isort/known-framework': /^react(\/|-dom|-router|$)/,
-		'isort/known-first-party': /^~/,
+		'import-sorting/known-framework': /^react(\/|-dom|-router|$)/,
+		'import-sorting/known-first-party': /^~/,
 	},
 })
 

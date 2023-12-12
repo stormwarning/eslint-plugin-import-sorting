@@ -1,4 +1,4 @@
-## eslint-plugin-isort
+## eslint-plugin-import-sorting
 
 Enforce a convention in the order of `import` statements, inspired by [isort](https://timothycrosley.github.io/isort/#how-does-isort-work)’s grouping style:
 
@@ -14,8 +14,8 @@ This plugin includes an additional group for “style” imports where the impor
 
 ```js
 rules: {
-	'isort/sort-imports': 'error',
+	'import-sorting/sort-imports': 'error',
 }
 ```
 
-See the [sort-imports](https://github.com/stormwarning/eslint-plugin-isort/blob/main/docs/rules/sort-imports.md) docs for more configuration options.
+See the [sort-imports](https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/sort-imports.md) docs for more configuration options.
