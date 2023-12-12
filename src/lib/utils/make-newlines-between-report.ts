@@ -1,3 +1,6 @@
+import type { AST, Rule } from 'eslint'
+
+import type { ImportNodeObject } from '../rules/sort-imports'
 import {
 	commentOnSameLineAs,
 	findEndOfLineWithComments,
@@ -5,9 +8,6 @@ import {
 } from './find-comment'
 import { findRootNode } from './find-root-node'
 import { takeTokensAfterWhile } from './take-tokens'
-
-import type { ImportNodeObject } from '../rules/sort-imports'
-import type { AST, Rule } from 'eslint'
 
 function fixNewLineAfterImport(context: Rule.RuleContext, previousImport: ImportNodeObject) {
 	let previousRoot = findRootNode(previousImport.node)

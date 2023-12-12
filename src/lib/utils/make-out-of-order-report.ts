@@ -132,8 +132,6 @@ function reportOutOfOrder(
 }
 
 export function makeOutOfOrderReport(context: Rule.RuleContext, imported: ImportNodeObject[]) {
-	console.log('IMPORTED', imported)
-
 	let outOfOrder = findOutOfOrder(imported)
 	if (outOfOrder.length === 0) return
 

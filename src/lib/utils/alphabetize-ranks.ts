@@ -1,5 +1,3 @@
-/* eslint-disable unicorn/no-array-for-each */
-
 import path from 'node:path'
 
 import groupBy from 'object.groupby'
@@ -17,16 +15,6 @@ const DEFAULT_IMPORT_KIND = 'value'
  * @todo Maybe add option to choose between 'natural' and 'literal' sorting.
  */
 function compareString(first: string, second: string) {
-	//
-	// if (first < second) {
-	// 	return -1
-	// }
-
-	// if (first > second) {
-	// 	return 1
-	// }
-
-	// return 0
 	return first.localeCompare(second, 'en')
 }
 
@@ -38,8 +26,6 @@ function compareDotSegments(first: string, second: string) {
 
 	if (firstCount > secondCount) return -1
 	if (firstCount < secondCount) return 1
-
-	console.log('SEGMENT COUNT IS EQUAL')
 
 	// If segment length is the same, compare the basename alphabetically.
 	return compareString(path.basename(first), path.basename(second))
@@ -104,23 +90,24 @@ export function mutateRanksToAlphabetize(imported: ImportNodeObject[], alphabeti
 	let groupRanks = Object.keys(groupedByRanks).sort((a, b) => Number(a) - Number(b))
 
 	// Sort imports locally within their group
-	groupRanks.forEach((groupRank) => {
+	for (let groupRank of groupRanks) {
 		groupedByRanks[groupRank].sort(sorterFunction)
-	})
+	}
 
 	// Assign globally unique rank to each import
 	let newRank = 0
 	let alphabetizedRanks = groupRanks.reduce((accumulator, groupRank) => {
-		groupedByRanks[groupRank].forEach((importedItem: ImportNodeObject) => {
+		for (let importedItem of groupedByRanks[groupRank]) {
 			accumulator[`${importedItem.value}|${importedItem.node.importKind}`] =
 				Number.parseInt(groupRank, 10) + newRank
 			newRank += 1
-		})
+		}
+
 		return accumulator
 	}, {})
-	console.log('ALPHARANKS', alphabetizedRanks)
 
 	// Mutate the original group-rank with alphabetized-rank
+	// eslint-disable-next-line unicorn/no-array-for-each
 	imported.forEach((importedItem) => {
 		importedItem.rank =
 			alphabetizedRanks[`${importedItem.value}|${importedItem.node.importKind}`]

@@ -1,10 +1,10 @@
+import type { Rule } from 'eslint'
+import type { ImportDeclaration } from 'estree'
+
 import { mutateRanksToAlphabetize } from '../utils/alphabetize-ranks'
 import { makeNewlinesBetweenReport } from '../utils/make-newlines-between-report'
 import { makeOutOfOrderReport } from '../utils/make-out-of-order-report'
 import { resolveImportGroup } from '../utils/resolve-import-group'
-
-import type { Rule } from 'eslint'
-import type { ImportDeclaration } from 'estree'
 
 const IMPORT_GROUPS = [
 	'builtin',
@@ -24,7 +24,7 @@ export type ImportNode = ImportDeclaration & Rule.NodeParentExtension
 type ImportName = ImportDeclaration['source']['value']
 
 export interface ImportNodeObject {
-	node: Rule.Node
+	node: Rule.Node & { importKind?: string }
 	value: ImportName
 	displayName: ImportName
 	type: 'import' | 'import:'
@@ -35,21 +35,6 @@ interface RankObject {
 	groups: GroupRankMap
 	omittedTypes: ImportGroup[]
 }
-
-/**
- * @param {*} ranks
- * @param {*} pathGroups
- * @param {*} path
- * @param {*} maxPosition
- */
-// function computePathRank(ranks, pathGroups, path, maxPosition) {
-// 	for (let index = 0, l = pathGroups.length; index < l; index++) {
-// 		let { pattern, patternOptions, group, position = 1 } = pathGroups[index]
-// 		if (minimatch(path, pattern, patternOptions || { nocomment: true })) {
-// 			return ranks[group] + position / maxPosition
-// 		}
-// 	}
-// }
 
 function computeRank(
 	context: Rule.RuleContext,
@@ -68,16 +53,6 @@ function computeRank(
 	// 	kind = 'type'
 	// } else {
 	// 	kind = resolveImportGroup(importEntry.value, context)
-	// }
-
-	/** Probably don't need this. */
-	// If (!excludedImportTypes.has(kind)) {
-	// 	rank = computePathRank(
-	// 		ranks.groups,
-	// 		ranks.pathGroups,
-	// 		importEntry.value,
-	// 		ranks.maxPosition,
-	// 	)
 	// }
 
 	rank = ranks.groups[kind]
@@ -102,7 +77,6 @@ function registerNode(
 }
 
 function convertGroupsToRanks(groups: typeof IMPORT_GROUPS) {
-	// eslint-disable-next-line unicorn/no-array-reduce
 	let rankObject = groups.reduce((result, group, index) => {
 		for (let groupItem of [group].flat()) {
 			if (!IMPORT_GROUPS.includes(groupItem)) {
@@ -127,7 +101,6 @@ function convertGroupsToRanks(groups: typeof IMPORT_GROUPS) {
 
 	let omittedTypes = IMPORT_GROUPS.filter((type) => rankObject[type] === undefined)
 
-	// eslint-disable-next-line unicorn/no-array-reduce
 	let ranks = omittedTypes.reduce((result, type) => {
 		result[type] = groups.length * 2
 		return result
@@ -179,6 +152,35 @@ export const sortImports: Rule.RuleModule = {
 						getBlockImports(node.parent),
 					)
 				}
+			},
+			TSImportEqualsDeclaration(node: ImportNode) {
+				if (node.isExport) return
+
+				let displayName
+				let value
+				let type
+
+				if (node.moduleReference.type === 'TSExternalModuleReference') {
+					value = node.moduleReference.expression.value
+					displayName = value
+					type = 'import'
+				} else {
+					value = ''
+					displayName = context.getSourceCode().getText(node.moduleReference)
+					type = 'import:object'
+				}
+
+				registerNode(
+					context,
+					{
+						node,
+						value,
+						displayName,
+						type,
+					},
+					ranks,
+					getBlockImports(node.parent),
+				)
 			},
 			'Program:exit'() {
 				// This is using the Map `forEach` method, not the array method.
