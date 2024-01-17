@@ -35,9 +35,18 @@ function isStyle(name: string) {
 	return name.endsWith('.css')
 }
 
+const assertStringSetting = (context: Rule.RuleContext, settingName: string) => {
+	let value = context.settings[settingName]
+
+	if (typeof value !== 'string')
+		throw new Error(`Invalid setting value for ${settingName}. String expected`)
+
+	return value
+}
+
 export function resolveImportGroup(name: string, context: Rule.RuleContext) {
-	let knownFramework = context.settings['import-sorting/known-framework'] as string
-	let knownFirstParty = context.settings['import-sorting/known-first-party'] as string
+	let knownFramework = assertStringSetting(context, 'import-sorting/known-framework')
+	let knownFirstParty = assertStringSetting(context, 'import-sorting/known-first-party')
 
 	if (isBuiltin(name)) return 'builtin'
 	if (isStyle(name)) return 'style'

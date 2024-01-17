@@ -19,6 +19,8 @@ const config = {
 		'import/parsers': {
 			[require.resolve('@typescript-eslint/parser')]: ['.ts', '.tsx'],
 		},
+		'import-sorting/known-framework': '^react(/|-dom|-router|$)',
+		'import-sorting/known-first-party': '^~',
 	},
 	extends: [
 		'@zazen',
