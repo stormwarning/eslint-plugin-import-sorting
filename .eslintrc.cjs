@@ -9,7 +9,6 @@ const config = {
 	parserOptions: {
 		ecmaVersion: 2021,
 	},
-	plugins: ['import-sorting'],
 	settings: {
 		'import/resolver': {
 			node: {
@@ -23,35 +22,26 @@ const config = {
 	extends: [
 		'@zazen',
 		'@zazen/eslint-config/node',
-		// '@zazen/eslint-config/typescript',
+		'@zazen/eslint-config/typescript',
 		'plugin:eslint-plugin/recommended',
 		'prettier',
 	],
 	rules: {
-		'import/extensions': [
+		/** Disabling until I can get better type info. */
+		'@typescript-eslint/no-unsafe-argument': 'warn',
+		'@typescript-eslint/no-unsafe-assignment': 'warn',
+		'@typescript-eslint/no-unsafe-call': 'warn',
+		'@typescript-eslint/no-unsafe-return': 'warn',
+
+		'@typescript-eslint/consistent-type-definitions': [
 			'error',
-			'ignorePackages',
-			{
-				pattern: {
-					ts: 'never',
-				},
-			},
+			'interface',
 		],
 
-		'import/order': 'off',
-
-		'import-sorting/order': 'error',
-
 		'unicorn/no-array-reduce': 'off',
+
+		'etc/prefer-less-than': 'off',
 	},
-	overrides: [
-		{
-			files: ['tests/**/*.{js,ts}'],
-			rules: {
-				'import/no-extraneous-dependencies': 'off',
-			},
-		},
-	],
 }
 
 module.exports = config
