@@ -1,10 +1,11 @@
+import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 import type { Rule } from 'eslint'
 import type { ImportDeclaration } from 'estree'
 
-import { mutateRanksToAlphabetize } from '../utils/alphabetize-ranks'
-import { makeNewlinesBetweenReport } from '../utils/make-newlines-between-report'
-import { makeOutOfOrderReport } from '../utils/make-out-of-order-report'
-import { resolveImportGroup } from '../utils/resolve-import-group'
+import { mutateRanksToAlphabetize } from '../utils/alphabetize-ranks.js'
+import { makeNewlinesBetweenReport } from '../utils/make-newlines-between-report.js'
+import { makeOutOfOrderReport } from '../utils/make-out-of-order-report.js'
+import { resolveImportGroup } from '../utils/resolve-import-group.js'
 
 const IMPORT_GROUPS = [
 	'builtin',
@@ -19,15 +20,17 @@ const IMPORT_GROUPS = [
 type ImportGroup = (typeof IMPORT_GROUPS)[number]
 type GroupRankMap = Record<(typeof IMPORT_GROUPS)[number], number>
 
-export type ImportNode = ImportDeclaration & Rule.NodeParentExtension
+export type ImportNode = (TSESTree.ImportDeclaration | TSESTree.TSImportEqualsDeclaration) & {
+	parent: TSESTree.Node
+}
 
 type ImportName = ImportDeclaration['source']['value']
 
 export interface ImportNodeObject {
-	node: Rule.Node & { importKind?: string }
+	node: ImportNode // & { importKind?: string }
 	value: ImportName
 	displayName: ImportName
-	type: 'import' | 'import:'
+	type: 'import' | 'import:object'
 	rank: number
 }
 
@@ -37,11 +40,11 @@ interface RankObject {
 }
 
 function computeRank(
-	context: Rule.RuleContext,
-	importEntry: Omit<ImportNodeObject, 'rank'>,
+	settings: TSESLint.SharedConfigurationSettings,
+	importEntry: ImportNodeObject,
 	ranks: RankObject,
 ) {
-	let kind: ImportGroup = resolveImportGroup(importEntry.value as string, context)
+	let kind: ImportGroup = resolveImportGroup(importEntry.value as string, settings)
 	let rank: number
 
 	/**
@@ -65,14 +68,14 @@ function computeRank(
 }
 
 function registerNode(
-	context: Rule.RuleContext,
-	importEntry: Omit<ImportNodeObject, 'rank'>,
+	settings: TSESLint.SharedConfigurationSettings,
+	importEntry: ImportNodeObject,
 	ranks: RankObject,
-	imported,
+	imported?: unknown[],
 ) {
-	let rank = computeRank(context, importEntry, ranks)
+	let rank = computeRank(settings, importEntry, ranks)
 	if (rank !== -1) {
-		imported.push({ ...importEntry, rank })
+		imported?.push({ ...importEntry, rank })
 	}
 }
 
@@ -109,29 +112,38 @@ function convertGroupsToRanks(groups: typeof IMPORT_GROUPS) {
 	return { groups: ranks, omittedTypes }
 }
 
-export const orderRule: Rule.RuleModule = {
+// eslint-disable-next-line new-cap
+const createRule = ESLintUtils.RuleCreator(
+	(name) =>
+		`https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/${name}.md`,
+)
+
+export const orderRule = createRule({
+	name: 'order',
 	meta: {
 		type: 'layout',
 		fixable: 'code',
 		docs: {
 			description: 'Enforce a convention in the order of `import` statements.',
-			url: 'https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/order.md',
 		},
-		schema: [
-			{
-				type: 'object',
-			},
-		],
+		messages: {
+			'needs-newline': 'There should be at least one empty line between import groups',
+			'extra-newline': 'There should be no empty line between import groups',
+			'extra-newline-in-group': 'There should be no empty line within import group',
+			'out-of-order': '{{secondImport}} should occur {{order}} {{firstImport}}',
+		},
+		schema: [],
 	},
+	defaultOptions: [],
 	create(context) {
-		let importMap: Map<Rule.Node, Array<ImportNodeObject>> = new Map()
+		let importMap = new Map<ImportNode, ImportNodeObject[]>()
 		let { groups, omittedTypes } = convertGroupsToRanks(IMPORT_GROUPS)
 		let ranks: RankObject = {
 			groups,
 			omittedTypes,
 		}
 
-		function getBlockImports(node: Rule.Node) {
+		function getBlockImports(node: ImportNode) {
 			if (!importMap.has(node)) {
 				importMap.set(node, [])
 			}
@@ -145,32 +157,36 @@ export const orderRule: Rule.RuleModule = {
 				if (node.specifiers.length > 0) {
 					let name = node.source.value
 					registerNode(
-						context,
+						context.settings,
 						{
 							node,
 							value: name,
 							displayName: name,
 							type: 'import',
+							/** @todo Check that setting this to a value doesn't cause problems. */
+							rank: 0,
 						},
 						ranks,
 						getBlockImports(node.parent),
 					)
 				}
 			},
-			TSImportEqualsDeclaration(node: ImportNode) {
+			TSImportEqualsDeclaration(node) {
+				// @ts-expect-error -- Probably don't need this check.
 				if (node.isExport) return
 
-				let displayName
-				let value
-				let type
+				let displayName: string
+				let value: string
+				let type: 'import' | 'import:object'
 
-				if (node.moduleReference.type === 'TSExternalModuleReference') {
-					value = node.moduleReference.expression.value
+				if (node.moduleReference.type === AST_NODE_TYPES.TSExternalModuleReference) {
+					/** @todo Not sure how to properly type this property. */
+					value = node.moduleReference.expression.value as string
 					displayName = value
 					type = 'import'
 				} else {
 					value = ''
-					displayName = context.getSourceCode().getText(node.moduleReference)
+					displayName = context.sourceCode.getText(node.moduleReference)
 					type = 'import:object'
 				}
 
@@ -181,6 +197,8 @@ export const orderRule: Rule.RuleModule = {
 						value,
 						displayName,
 						type,
+						/** @todo Check that setting this to a value doesn't cause problems. */
+						rank: 0,
 					},
 					ranks,
 					getBlockImports(node.parent),
@@ -199,4 +217,4 @@ export const orderRule: Rule.RuleModule = {
 			},
 		}
 	},
-}
+})

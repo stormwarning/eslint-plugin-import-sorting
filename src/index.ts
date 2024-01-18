@@ -1,4 +1,4 @@
-import { orderRule } from './lib/rules/order'
+import { orderRule } from './lib/rules/order.js'
 
 const plugin = {
 	rules: {

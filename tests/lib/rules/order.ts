@@ -1,15 +1,16 @@
-import { RuleTester } from 'eslint'
+import { RuleTester } from '@typescript-eslint/rule-tester'
 
-import { orderRule } from '../../../src/lib/rules/order'
+import { orderRule } from '../../../src/lib/rules/order.js'
 
 const ruleTester = new RuleTester({
+	parser: '@typescript-eslint/parser',
 	parserOptions: {
 		sourceType: 'module',
 		ecmaVersion: 6,
 	},
 	settings: {
-		'import-sorting/known-framework': '^react(/|-dom|-router|$)',
-		'import-sorting/known-first-party': '^~',
+		'import-sorting/known-framework': /^react(\/|-dom|-router|$)/.source,
+		'import-sorting/known-first-party': /^~/.source,
 	},
 })
 
@@ -53,7 +54,7 @@ ruleTester.run('order', orderRule, {
 				import { x, y, z } from 'package'
 				import { a, b, c } from 'package/path'
 			`,
-			errors: [{ message: '`package` import should occur before import of `package/path`' }],
+			errors: [{ messageId: 'out-of-order' }],
 		},
 
 		// It groups built-in modules separately.
@@ -69,10 +70,7 @@ ruleTester.run('order', orderRule, {
 				import { x, y, z } from '@scope/package'
 				import { a, b, c } from 'package'
 			`,
-			errors: [
-				{ message: 'There should be at least one empty line between import groups' },
-				{ message: '`node:fs` import should occur before import of `@scope/package`' },
-			],
+			errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
 		},
 
 		// It groups framework modules separately.
@@ -87,7 +85,7 @@ ruleTester.run('order', orderRule, {
 
 				import flatten from 'react-keyed-flatten-children'
 			`,
-			errors: [{ message: 'There should be at least one empty line between import groups' }],
+			errors: [{ messageId: 'needs-newline' }],
 		},
 
 		// It groups first-party modules separately.
@@ -102,7 +100,7 @@ ruleTester.run('order', orderRule, {
 
 				import B from '~/components'
 			`,
-			errors: [{ message: 'There should be at least one empty line between import groups' }],
+			errors: [{ messageId: 'needs-newline' }],
 		},
 
 		/**
@@ -125,7 +123,7 @@ ruleTester.run('order', orderRule, {
 			`,
 			errors: [
 				{
-					message: '`../module-a.js` import should occur before import of `./index.js`',
+					messageId: 'out-of-order',
 				},
 			],
 		},

@@ -1,6 +1,6 @@
 import { isBuiltin } from 'node:module'
 
-import type { Rule } from 'eslint'
+import type { TSESLint } from '@typescript-eslint/utils'
 
 const moduleRegExp = /^\w/
 function isModule(name: string) {
@@ -35,18 +35,17 @@ function isStyle(name: string) {
 	return name.endsWith('.css')
 }
 
-const assertStringSetting = (context: Rule.RuleContext, settingName: string) => {
-	let value = context.settings[settingName]
+function assertStringSetting(settings: TSESLint.SharedConfigurationSettings, setting: string) {
+	let value = settings[setting]
 
-	if (typeof value !== 'string')
-		throw new Error(`Invalid setting value for ${settingName}. String expected`)
+	if (typeof value !== 'string') throw new Error(`Invalid value for ${setting}. String expected.`)
 
 	return value
 }
 
-export function resolveImportGroup(name: string, context: Rule.RuleContext) {
-	let knownFramework = assertStringSetting(context, 'import-sorting/known-framework')
-	let knownFirstParty = assertStringSetting(context, 'import-sorting/known-first-party')
+export function resolveImportGroup(name: string, settings: TSESLint.SharedConfigurationSettings) {
+	let knownFramework = assertStringSetting(settings, 'import-sorting/known-framework')
+	let knownFirstParty = assertStringSetting(settings, 'import-sorting/known-first-party')
 
 	if (isBuiltin(name)) return 'builtin'
 	if (isStyle(name)) return 'style'

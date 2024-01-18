@@ -3,7 +3,7 @@
   "access": "public",
   "baseBranch": "main",
   "changelog": [
-    "@changesets/changelog-github",
+    "@zazen/changesets-changelog",
     { "repo": "stormwarning/eslint-plugin-import-sorting" }
   ],
   "commit": false,
