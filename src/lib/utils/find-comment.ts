@@ -1,12 +1,12 @@
-import type { Rule, SourceCode } from 'eslint'
+import type { TSESLint } from '@typescript-eslint/utils'
 
-import { takeTokensAfterWhile, takeTokensBeforeWhile } from './take-tokens'
+import type { ImportNode } from '../rules/order.js'
+import { takeTokensAfterWhile, takeTokensBeforeWhile } from './take-tokens.js'
 
-export function findStartOfLineWithComments(sourceCode: SourceCode, node: Rule.Node) {
+export function findStartOfLineWithComments(sourceCode: TSESLint.SourceCode, node: ImportNode) {
 	let tokensToEndOfLine = takeTokensBeforeWhile(sourceCode, node, commentOnSameLineAs(node))
-	let startOfTokens = (
+	let startOfTokens =
 		tokensToEndOfLine.length > 0 ? tokensToEndOfLine[0].range?.[0] : node.range?.[0]
-	) as number
 	let result = startOfTokens
 
 	for (let index = startOfTokens - 1; index > 0; index--) {
@@ -20,11 +20,11 @@ export function findStartOfLineWithComments(sourceCode: SourceCode, node: Rule.N
 	return result
 }
 
-export function findEndOfLineWithComments(sourceCode: SourceCode, node: Rule.Node) {
+export function findEndOfLineWithComments(sourceCode: TSESLint.SourceCode, node: ImportNode) {
 	let tokensToEndOfLine = takeTokensAfterWhile(sourceCode, node, commentOnSameLineAs(node))
 	let endOfTokens = (
 		tokensToEndOfLine.length > 0 ? tokensToEndOfLine.at(-1)?.range?.[1] : node.range?.[1]
-	) as number
+	)!
 	let result = endOfTokens
 
 	for (let index = endOfTokens; index < sourceCode.text.length; index++) {
@@ -48,9 +48,9 @@ export function findEndOfLineWithComments(sourceCode: SourceCode, node: Rule.Nod
 }
 
 /** @todo rename to has-comment-on-same-line */
-export function commentOnSameLineAs(node: Rule.Node) {
+export function commentOnSameLineAs(node: ImportNode) {
 	return (token: any) =>
 		(token.type === 'Block' || token.type === 'Line') &&
 		token.loc.start.line === token.loc.end.line &&
-		token.loc.end.line === node.loc?.end.line
+		token.loc.end.line === node.loc.end.line
 }

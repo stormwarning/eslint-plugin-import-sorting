@@ -1,11 +1,14 @@
-import type { SourceCode, AST, Rule } from 'eslint'
-import * as ESTree from 'estree'
+import type { TSESLint } from '@typescript-eslint/utils'
+import type { AST } from 'eslint'
 
-function getTokensOrCommentsBefore(sourceCode: SourceCode, node: Rule.Node, count = 100) {
+import type { ImportNode } from '../rules/order.js'
+
+function getTokensOrCommentsBefore(sourceCode: TSESLint.SourceCode, node: ImportNode, count = 100) {
 	let currentNodeOrToken = node
-	let result: Array<ESTree.Node | AST.Token> = []
+	let result: Array<ImportNode | AST.Token> = []
 
 	for (let index = 0; index < count; index++) {
+		// @ts-expect-error -- Not sure where this method comes from.
 		currentNodeOrToken = sourceCode.getTokenOrCommentBefore(currentNodeOrToken)
 		// eslint-disable-next-line no-eq-null, eqeqeq
 		if (currentNodeOrToken == null) {
@@ -19,12 +22,12 @@ function getTokensOrCommentsBefore(sourceCode: SourceCode, node: Rule.Node, coun
 }
 
 export function takeTokensBeforeWhile(
-	sourceCode: SourceCode,
-	node: Rule.Node,
-	condition: (_token: ESTree.Node | AST.Token) => boolean,
+	sourceCode: TSESLint.SourceCode,
+	node: ImportNode,
+	condition: (_token: ImportNode | AST.Token) => boolean,
 ) {
 	let tokens = getTokensOrCommentsBefore(sourceCode, node, 100)
-	let result: Array<ESTree.Node | AST.Token> = []
+	let result: Array<ImportNode | AST.Token> = []
 
 	for (let index = tokens.length - 1; index >= 0; index--) {
 		if (condition(tokens[index])) {
@@ -37,11 +40,16 @@ export function takeTokensBeforeWhile(
 	return result.reverse()
 }
 
-function getTokensOrCommentsAfter(sourceCode: SourceCode, node: Rule.Node, count: number) {
+function getTokensOrCommentsAfter(
+	sourceCode: TSESLint.SourceCode,
+	node: ImportNode,
+	count: number,
+) {
 	let currentNodeOrToken = node
-	let result: Array<ESTree.Node | AST.Token> = []
+	let result: Array<ImportNode | AST.Token> = []
 
 	for (let index = 0; index < count; index++) {
+		// @ts-expect-error -- Not sure where this method comes from.
 		currentNodeOrToken = sourceCode.getTokenOrCommentAfter(currentNodeOrToken)
 		// eslint-disable-next-line no-eq-null, eqeqeq
 		if (currentNodeOrToken == null) {
@@ -55,12 +63,12 @@ function getTokensOrCommentsAfter(sourceCode: SourceCode, node: Rule.Node, count
 }
 
 export function takeTokensAfterWhile(
-	sourceCode: SourceCode,
-	node: Rule.Node,
-	condition: (_token: ESTree.Node | AST.Token) => boolean,
+	sourceCode: TSESLint.SourceCode,
+	node: ImportNode,
+	condition: (_token: ImportNode | AST.Token) => boolean,
 ) {
 	let tokens = getTokensOrCommentsAfter(sourceCode, node, 100)
-	let result: Array<ESTree.Node | AST.Token> = []
+	let result: Array<ImportNode | AST.Token> = []
 
 	for (let token of tokens) {
 		if (condition(token)) {

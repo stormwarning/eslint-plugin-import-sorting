@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import groupBy from 'object.groupby'
 
-import type { ImportNodeObject } from '../rules/order'
+import type { ImportNodeObject } from '../rules/order.js'
 
 type OrderDirection = 'asc' | 'desc'
 
@@ -21,10 +21,10 @@ function compareString(first: string, second: string) {
 function compareDotSegments(first: string, second: string) {
 	let regex = /\.+(?=\/)/g
 
-	let firstCount = (first.match(regex) || []).join('').length
-	let secondCount = (second.match(regex) || []).join('').length
+	let firstCount = (first.match(regex) ?? []).join('').length
+	let secondCount = (second.match(regex) ?? []).join('').length
 
-	if (firstCount > secondCount) return -1
+	if (secondCount < firstCount) return -1
 	if (firstCount < secondCount) return 1
 
 	// If segment length is the same, compare the basename alphabetically.
@@ -69,8 +69,8 @@ function getSorter(order: OrderDirection) {
 			result =
 				multiplierImportKind *
 				compareString(
-					nodeA.node.importKind || DEFAULT_IMPORT_KIND,
-					nodeB.node.importKind || DEFAULT_IMPORT_KIND,
+					nodeA.node.importKind ?? DEFAULT_IMPORT_KIND,
+					nodeB.node.importKind ?? DEFAULT_IMPORT_KIND,
 				)
 		}
 
@@ -78,7 +78,10 @@ function getSorter(order: OrderDirection) {
 	}
 }
 
-export function mutateRanksToAlphabetize(imported: ImportNodeObject[], alphabetizeOptions) {
+export function mutateRanksToAlphabetize(
+	imported: ImportNodeObject[],
+	alphabetizeOptions: OrderDirection,
+) {
 	let groupedByRanks: Record<number, ImportNodeObject[]> = groupBy(
 		imported,
 		(item: ImportNodeObject) => item.rank,

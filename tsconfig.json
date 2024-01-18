@@ -4,8 +4,8 @@
     "strictNullChecks": true,
 
     // Modules
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
 
     // JavaScript Support
     "allowJs": true,
@@ -25,5 +25,6 @@
     // Completeness
     "skipLibCheck": true
   },
+  "include": ["src", "tests", ".eslintrc.cjs", "vite.config.js"],
   "exclude": ["node_modules", "dist"]
 }
