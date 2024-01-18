@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-import-sorting",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ESLint plugin to group and sort imports by module, à la Python isort",
   "keywords": [
     "eslint",
