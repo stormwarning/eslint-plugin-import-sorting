@@ -33,13 +33,10 @@ const config = {
 		'@typescript-eslint/no-unsafe-call': 'warn',
 		'@typescript-eslint/no-unsafe-return': 'warn',
 
-		'@typescript-eslint/consistent-type-definitions': [
-			'error',
-			'interface',
-		],
-
+		/** Disabled for now pending refactor. */
 		'unicorn/no-array-reduce': 'off',
 
+		'etc/no-assign-mutated-array': 'off',
 		'etc/prefer-less-than': 'off',
 	},
 }
