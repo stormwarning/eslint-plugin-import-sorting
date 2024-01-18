@@ -35,9 +35,17 @@ function isStyle(name: string) {
 	return name.endsWith('.css')
 }
 
+function assertStringSetting(settings: TSESLint.SharedConfigurationSettings, setting: string) {
+	let value = settings[setting]
+
+	if (typeof value !== 'string') throw new Error(`Invalid value for ${setting}. String expected.`)
+
+	return value
+}
+
 export function resolveImportGroup(name: string, settings: TSESLint.SharedConfigurationSettings) {
-	let knownFramework = settings['import-sorting/known-framework'] as string
-	let knownFirstParty = settings['import-sorting/known-first-party'] as string
+	let knownFramework = assertStringSetting(settings, 'import-sorting/known-framework')
+	let knownFirstParty = assertStringSetting(settings, 'import-sorting/known-first-party')
 
 	if (isBuiltin(name)) return 'builtin'
 	if (isStyle(name)) return 'style'
