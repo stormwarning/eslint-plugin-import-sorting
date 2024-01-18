@@ -4,7 +4,8 @@
 
 ### Patch Changes
 
-- Add guard against non-string `settings` values ([#3](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/3))
+- Add guard against non-string `settings` values ([#3](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/3))  
+  Thanks [@jakubpelczarclari](https://github.com/jakubpelczarclari)!
 
 ## 1.0.0
 
