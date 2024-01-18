@@ -1,6 +1,6 @@
 import { isBuiltin } from 'node:module'
 
-import type { Rule } from 'eslint'
+import type { TSESLint } from '@typescript-eslint/utils'
 
 const moduleRegExp = /^\w/
 function isModule(name: string) {
@@ -35,9 +35,9 @@ function isStyle(name: string) {
 	return name.endsWith('.css')
 }
 
-export function resolveImportGroup(name: string, context: Rule.RuleContext) {
-	let knownFramework = context.settings['import-sorting/known-framework'] as string
-	let knownFirstParty = context.settings['import-sorting/known-first-party'] as string
+export function resolveImportGroup(name: string, settings: TSESLint.SharedConfigurationSettings) {
+	let knownFramework = settings['import-sorting/known-framework'] as string
+	let knownFirstParty = settings['import-sorting/known-first-party'] as string
 
 	if (isBuiltin(name)) return 'builtin'
 	if (isStyle(name)) return 'style'

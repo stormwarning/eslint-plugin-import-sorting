@@ -1,15 +1,21 @@
-import type { AST, Rule } from 'eslint'
+/* eslint-disable @typescript-eslint/ban-types */
 
-import type { ImportNodeObject } from '../rules/order'
+import type { TSESLint } from '@typescript-eslint/utils'
+import type { AST } from 'eslint'
+
+import type { ImportNodeObject } from '../rules/order.js'
 import {
 	commentOnSameLineAs,
 	findEndOfLineWithComments,
 	findStartOfLineWithComments,
-} from './find-comment'
-import { findRootNode } from './find-root-node'
-import { takeTokensAfterWhile } from './take-tokens'
+} from './find-comment.js'
+import { findRootNode } from './find-root-node.js'
+import { takeTokensAfterWhile } from './take-tokens.js'
 
-function fixNewLineAfterImport(context: Rule.RuleContext, previousImport: ImportNodeObject) {
+function fixNewLineAfterImport(
+	context: TSESLint.RuleContext<string, []>,
+	previousImport: ImportNodeObject,
+) {
 	let previousRoot = findRootNode(previousImport.node)
 	let tokensToEndOfLine = takeTokensAfterWhile(
 		context.sourceCode,
@@ -17,17 +23,17 @@ function fixNewLineAfterImport(context: Rule.RuleContext, previousImport: Import
 		commentOnSameLineAs(previousRoot),
 	)
 
-	let endOfLine = previousRoot.range?.[1] as number
+	let endOfLine = previousRoot.range[1]
 	if (tokensToEndOfLine.length > 0) {
-		endOfLine = tokensToEndOfLine.at(-1)?.range?.[1] as number
+		endOfLine = tokensToEndOfLine.at(-1)!.range[1]
 	}
 
-	return (fixer: Rule.RuleFixer) =>
-		fixer.insertTextAfterRange([previousRoot.range?.[0] as number, endOfLine], '\n')
+	return (fixer: TSESLint.RuleFixer) =>
+		fixer.insertTextAfterRange([previousRoot.range[0], endOfLine], '\n')
 }
 
 function removeNewLineAfterImport(
-	context: Rule.RuleContext,
+	context: TSESLint.RuleContext<string, []>,
 	currentImport: ImportNodeObject,
 	previousImport: ImportNodeObject,
 ) {
@@ -40,14 +46,14 @@ function removeNewLineAfterImport(
 	]
 
 	if (/^\s*$/.test(sourceCode.text.slice(rangeToRemove[0], rangeToRemove[1]))) {
-		return (fixer: Rule.RuleFixer) => fixer.removeRange(rangeToRemove)
+		return (fixer: TSESLint.RuleFixer) => fixer.removeRange(rangeToRemove)
 	}
 
 	return undefined
 }
 
 export function makeNewlinesBetweenReport(
-	context: Rule.RuleContext,
+	context: TSESLint.RuleContext<string, []>,
 	imported: ImportNodeObject[],
 	newlinesBetweenImports = 'always',
 ) {
@@ -79,7 +85,7 @@ export function makeNewlinesBetweenReport(
 				if (isStartOfDistinctGroup) {
 					context.report({
 						node: previousImport.node,
-						message: 'There should be at least one empty line between import groups',
+						messageId: 'needs-newline',
 						fix: fixNewLineAfterImport(context, previousImport),
 					})
 				}
@@ -89,14 +95,14 @@ export function makeNewlinesBetweenReport(
 			) {
 				context.report({
 					node: previousImport.node,
-					message: 'There should be no empty line within import group',
+					messageId: 'extra-newline',
 					fix: removeNewLineAfterImport(context, currentImport, previousImport),
 				})
 			}
 		} else if (emptyLinesBetween > 0) {
 			context.report({
 				node: previousImport.node,
-				message: 'There should be no empty line between import groups',
+				messageId: 'extra-newline-in-group',
 				fix: removeNewLineAfterImport(context, currentImport, previousImport),
 			})
 		}

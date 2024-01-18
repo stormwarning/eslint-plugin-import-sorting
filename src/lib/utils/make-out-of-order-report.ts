@@ -1,8 +1,10 @@
-import type { Rule } from 'eslint'
+/* eslint-disable @typescript-eslint/ban-types */
 
-import type { ImportNodeObject } from '../rules/order'
-import { findEndOfLineWithComments, findStartOfLineWithComments } from './find-comment'
-import { findRootNode } from './find-root-node'
+import { AST_NODE_TYPES, type TSESLint } from '@typescript-eslint/utils'
+
+import type { ImportNode, ImportNodeObject } from '../rules/order.js'
+import { findEndOfLineWithComments, findStartOfLineWithComments } from './find-comment.js'
+import { findRootNode } from './find-root-node.js'
 
 type OrderTerm = 'before' | 'after'
 
@@ -11,12 +13,12 @@ function findOutOfOrder(imported: ImportNodeObject[]) {
 
 	let maxSeenRankNode = imported[0]
 	return imported.filter((importedModule) => {
-		let result = importedModule.rank < maxSeenRankNode.rank
+		let isLessThanPrevious = importedModule.rank < maxSeenRankNode.rank
 		if (maxSeenRankNode.rank < importedModule.rank) {
 			maxSeenRankNode = importedModule
 		}
 
-		return result
+		return isLessThanPrevious
 	})
 }
 
@@ -24,18 +26,20 @@ function reverse(array: ImportNodeObject[]) {
 	return array.map((v) => ({ ...v, rank: -v.rank })).reverse()
 }
 
-function isPlainImportModule(node: Rule.Node) {
+function isPlainImportModule(node: ImportNode) {
 	return (
+		node.type === AST_NODE_TYPES.ImportDeclaration &&
 		// eslint-disable-next-line no-eq-null, eqeqeq
-		node.type === 'ImportDeclaration' && node.specifiers != null && node.specifiers.length > 0
+		node.specifiers != null &&
+		node.specifiers.length > 0
 	)
 }
 
-function isPlainImportEquals(node) {
-	return node.type === 'TSImportEqualsDeclaration' && node.moduleReference.expression
+function isPlainImportEquals(node: ImportNode): boolean {
+	return node.type === AST_NODE_TYPES.TSImportEqualsDeclaration && node.moduleReference.expression
 }
 
-function canCrossNodeWhileReorder(node: Rule.Node) {
+function canCrossNodeWhileReorder(node: ImportNode) {
 	return isPlainImportModule(node) || isPlainImportEquals(node)
 }
 
@@ -43,12 +47,12 @@ function canCrossNodeWhileReorder(node: Rule.Node) {
  * The `parent` key should have a type of `ESTree.Program` but then the `body`
  * key is incompatible with the `Rule.Node` type.
  */
-function canReorderItems(firstNode: Rule.Node, secondNode: Rule.Node) {
+function canReorderItems(firstNode: ImportNode, secondNode: ImportNode) {
 	let { parent } = firstNode
-	let [firstIndex, secondIndex] = [
-		parent.body.indexOf(firstNode),
-		parent.body.indexOf(secondNode),
-	].sort()
+
+	let [firstIndex, secondIndex] = (
+		[parent.body.indexOf(firstNode), parent.body.indexOf(secondNode)] as [number, number]
+	).sort()
 	let nodesBetween = parent.body.slice(firstIndex, secondIndex + 1)
 
 	for (let nodeBetween of nodesBetween) {
@@ -62,12 +66,13 @@ function canReorderItems(firstNode: Rule.Node, secondNode: Rule.Node) {
 
 function makeImportDescription(node: ImportNodeObject) {
 	if (node.node.importKind === 'type') return 'type import'
-	if (node.node.importKind === 'typeof') return 'typeof import'
+	// Only needed for Flow syntax.
+	// if (node.node.importKind === 'typeof') return 'typeof import'
 	return 'import'
 }
 
 function fixOutOfOrder(
-	context: Rule.RuleContext,
+	context: TSESLint.RuleContext<string, []>,
 	firstNode: ImportNodeObject,
 	secondNode: ImportNodeObject,
 	order: OrderTerm,
@@ -90,14 +95,14 @@ function fixOutOfOrder(
 
 	let firstImport = `${makeImportDescription(firstNode)} of \`${firstNode.displayName}\``
 	let secondImport = `\`${secondNode.displayName}\` ${makeImportDescription(secondNode)}`
-	let message = `${secondImport} should occur ${order} ${firstImport}`
 
 	if (order === 'before') {
 		context.report({
 			node: secondNode.node,
-			message,
+			messageId: 'out-of-order',
+			data: { firstImport, secondImport, order },
 			fix: canFix
-				? (fixer: Rule.RuleFixer) =>
+				? (fixer: TSESLint.RuleFixer) =>
 						fixer.replaceTextRange(
 							[firstRootStart, secondRootEnd],
 							newCode + sourceCode.text.slice(firstRootStart, secondRootStart),
@@ -107,9 +112,10 @@ function fixOutOfOrder(
 	} else if (order === 'after') {
 		context.report({
 			node: secondNode.node,
-			message,
+			messageId: 'out-of-order',
+			data: { firstImport, secondImport, order },
 			fix: canFix
-				? (fixer: Rule.RuleFixer) =>
+				? (fixer: TSESLint.RuleFixer) =>
 						fixer.replaceTextRange(
 							[secondRootStart, firstRootEnd],
 							sourceCode.text.slice(secondRootEnd, firstRootEnd) + newCode,
@@ -120,7 +126,7 @@ function fixOutOfOrder(
 }
 
 function reportOutOfOrder(
-	context: Rule.RuleContext,
+	context: TSESLint.RuleContext<string, []>,
 	imported: ImportNodeObject[],
 	outOfOrder: ImportNodeObject[],
 	order: OrderTerm,
@@ -131,7 +137,10 @@ function reportOutOfOrder(
 	}
 }
 
-export function makeOutOfOrderReport(context: Rule.RuleContext, imported: ImportNodeObject[]) {
+export function makeOutOfOrderReport(
+	context: TSESLint.RuleContext<string, []>,
+	imported: ImportNodeObject[],
+) {
 	let outOfOrder = findOutOfOrder(imported)
 	if (outOfOrder.length === 0) return
 
