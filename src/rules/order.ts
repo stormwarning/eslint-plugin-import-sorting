@@ -1,5 +1,4 @@
 import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
-import type { Rule } from 'eslint'
 import type { ImportDeclaration } from 'estree'
 
 import { mutateRanksToAlphabetize } from '../utils/alphabetize-ranks.js'
@@ -118,7 +117,7 @@ const createRule = ESLintUtils.RuleCreator(
 		`https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/${name}.md`,
 )
 
-export const orderRule = createRule({
+export default createRule({
 	name: 'order',
 	meta: {
 		type: 'layout',
@@ -167,7 +166,8 @@ export const orderRule = createRule({
 							rank: 0,
 						},
 						ranks,
-						getBlockImports(node.parent),
+						/** @todo Maybe get better types for `parent` property? */
+						getBlockImports(node.parent as ImportNode),
 					)
 				}
 			},
@@ -181,6 +181,7 @@ export const orderRule = createRule({
 
 				if (node.moduleReference.type === AST_NODE_TYPES.TSExternalModuleReference) {
 					/** @todo Not sure how to properly type this property. */
+					// @ts-expect-error -- Need a narrower type for `expression` property.
 					value = node.moduleReference.expression.value as string
 					displayName = value
 					type = 'import'
@@ -201,7 +202,8 @@ export const orderRule = createRule({
 						rank: 0,
 					},
 					ranks,
-					getBlockImports(node.parent),
+					/** @todo Maybe get better types for `parent` property? */
+					getBlockImports(node.parent as ImportNode),
 				)
 			},
 			'Program:exit'() {

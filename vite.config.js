@@ -5,8 +5,9 @@ export default defineConfig({
 		lib: {
 			entry: './src/index.ts',
 			formats: ['cjs'],
-			fileName: 'index',
+			fileName: () => 'index.js',
 		},
+		minify: false,
 		rollupOptions: {
 			external: ['node:module', 'node:path'],
 		},

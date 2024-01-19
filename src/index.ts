@@ -1,9 +1,7 @@
-import { orderRule } from './lib/rules/order.js'
+import order from './rules/order.js'
 
-const plugin = {
+export = {
 	rules: {
-		order: orderRule,
+		order,
 	},
 }
-
-export default plugin

@@ -1,6 +1,6 @@
 import { RuleTester } from '@typescript-eslint/rule-tester'
 
-import { orderRule } from '../../../src/lib/rules/order.js'
+import orderRule from '../../src/rules/order.js'
 
 const ruleTester = new RuleTester({
 	parser: '@typescript-eslint/parser',

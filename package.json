@@ -14,10 +14,22 @@
   ],
   "repository": "stormwarning/eslint-plugin-import-sorting",
   "author": "Jeff (https://tidaltheory.io)",
-  "type": "module",
-  "main": "dist/index.cjs",
+  "type": "commonjs",
+  "exports": {
+    ".": {
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "docs",
+    "CHANGELOG.md",
+    "LICENSE.txt",
+    "README.md"
+  ],
   "scripts": {
-    "build": "vite build",
+    "build": "tsc -b tsconfig.build.json",
     "changeset": "changeset add",
     "prepare": "husky install",
     "release": "npm run build && changeset publish",
