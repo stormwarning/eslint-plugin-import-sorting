@@ -1,5 +1,13 @@
 # eslint-plugin-import-sorting
 
+## 1.0.2
+
+### Patch Changes
+
+- Update export and build strategy ([#6](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/6))
+
+  Should fix issues with plugin being unable to load, or rule definitions not being found.
+
 ## 1.0.1
 
 ### Patch Changes
