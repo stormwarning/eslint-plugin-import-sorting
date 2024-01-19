@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
-
 import type { TSESLint } from '@typescript-eslint/utils'
 import type { AST } from 'eslint'
 
@@ -13,7 +11,7 @@ import { findRootNode } from './find-root-node.js'
 import { takeTokensAfterWhile } from './take-tokens.js'
 
 function fixNewLineAfterImport(
-	context: TSESLint.RuleContext<string, []>,
+	context: TSESLint.RuleContext<string, never[]>,
 	previousImport: ImportNodeObject,
 ) {
 	let previousRoot = findRootNode(previousImport.node)
@@ -33,7 +31,7 @@ function fixNewLineAfterImport(
 }
 
 function removeNewLineAfterImport(
-	context: TSESLint.RuleContext<string, []>,
+	context: TSESLint.RuleContext<string, never[]>,
 	currentImport: ImportNodeObject,
 	previousImport: ImportNodeObject,
 ) {
@@ -53,7 +51,7 @@ function removeNewLineAfterImport(
 }
 
 export function makeNewlinesBetweenReport(
-	context: TSESLint.RuleContext<string, []>,
+	context: TSESLint.RuleContext<string, never[]>,
 	imported: ImportNodeObject[],
 	newlinesBetweenImports = 'always',
 ) {

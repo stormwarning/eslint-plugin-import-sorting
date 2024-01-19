@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
-
 import { AST_NODE_TYPES, type TSESLint } from '@typescript-eslint/utils'
 
 import type { ImportNode, ImportNodeObject } from '../rules/order.js'
@@ -36,7 +34,10 @@ function isPlainImportModule(node: ImportNode) {
 }
 
 function isPlainImportEquals(node: ImportNode): boolean {
-	return node.type === AST_NODE_TYPES.TSImportEqualsDeclaration && node.moduleReference.expression
+	return (
+		node.type === AST_NODE_TYPES.TSImportEqualsDeclaration &&
+		'expression' in node.moduleReference
+	)
 }
 
 function canCrossNodeWhileReorder(node: ImportNode) {
@@ -50,9 +51,13 @@ function canCrossNodeWhileReorder(node: ImportNode) {
 function canReorderItems(firstNode: ImportNode, secondNode: ImportNode) {
 	let { parent } = firstNode
 
-	let [firstIndex, secondIndex] = (
-		[parent.body.indexOf(firstNode), parent.body.indexOf(secondNode)] as [number, number]
-	).sort()
+	// @ts-expect-error -- Types don't account for `body` property on `parent`.
+	let indices = [parent.body.indexOf(firstNode), parent.body.indexOf(secondNode)] as [
+		number,
+		number,
+	]
+	let [firstIndex, secondIndex] = indices.sort()
+	// @ts-expect-error -- Types don't account for `body` property on `parent`.
 	let nodesBetween = parent.body.slice(firstIndex, secondIndex + 1)
 
 	for (let nodeBetween of nodesBetween) {
@@ -72,7 +77,7 @@ function makeImportDescription(node: ImportNodeObject) {
 }
 
 function fixOutOfOrder(
-	context: TSESLint.RuleContext<string, []>,
+	context: TSESLint.RuleContext<string, never[]>,
 	firstNode: ImportNodeObject,
 	secondNode: ImportNodeObject,
 	order: OrderTerm,
@@ -126,7 +131,7 @@ function fixOutOfOrder(
 }
 
 function reportOutOfOrder(
-	context: TSESLint.RuleContext<string, []>,
+	context: TSESLint.RuleContext<string, never[]>,
 	imported: ImportNodeObject[],
 	outOfOrder: ImportNodeObject[],
 	order: OrderTerm,
@@ -138,7 +143,7 @@ function reportOutOfOrder(
 }
 
 export function makeOutOfOrderReport(
-	context: TSESLint.RuleContext<string, []>,
+	context: TSESLint.RuleContext<string, never[]>,
 	imported: ImportNodeObject[],
 ) {
 	let outOfOrder = findOutOfOrder(imported)

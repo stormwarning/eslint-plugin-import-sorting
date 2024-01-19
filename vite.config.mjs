@@ -5,8 +5,9 @@ export default defineConfig({
 		lib: {
 			entry: './src/index.ts',
 			formats: ['cjs'],
-			fileName: 'index',
+			fileName: () => 'index.js',
 		},
+		minify: false,
 		rollupOptions: {
 			external: ['node:module', 'node:path'],
 		},
@@ -14,6 +15,6 @@ export default defineConfig({
 	test: {
 		globals: true,
 		environment: 'node',
-		include: 'tests/lib/**/*.ts',
+		include: 'tests/**/*.ts',
 	},
 })
