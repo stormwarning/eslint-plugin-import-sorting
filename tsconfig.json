@@ -25,6 +25,6 @@
     // Completeness
     "skipLibCheck": true
   },
-  "include": ["src", "tests", ".eslintrc.cjs", "vite.config.js"],
+  "include": ["src", "tests", ".eslintrc.cjs", "vite.config.mjs"],
   "exclude": ["node_modules", "dist"]
 }
