@@ -12,7 +12,7 @@ function isScoped(name: string) {
 	return name && scopedRegExp.test(name)
 }
 
-function isFramework(name: string, pattern: string | RegExp) {
+function isFramework(name: string, pattern: string) {
 	return pattern && new RegExp(pattern).test(name)
 }
 
@@ -20,7 +20,7 @@ function isThirdParty(name: string) {
 	return isModule(name) || isScoped(name)
 }
 
-function isFirstParty(name: string, pattern: string | RegExp) {
+function isFirstParty(name: string, pattern: string) {
 	return pattern && new RegExp(pattern).test(name)
 }
 
@@ -38,6 +38,7 @@ function isStyle(name: string) {
 function assertStringSetting(settings: TSESLint.SharedConfigurationSettings, setting: string) {
 	let value = settings[setting]
 
+	if (!value) return ''
 	if (typeof value !== 'string') throw new Error(`Invalid value for ${setting}. String expected.`)
 
 	return value
