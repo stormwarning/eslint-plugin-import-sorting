@@ -1,5 +1,11 @@
 # eslint-plugin-import-sorting
 
+## 1.0.3
+
+### Patch Changes
+
+- Fix error when plugin settings are undefined ([#9](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/9))
+
 ## 1.0.2
 
 ### Patch Changes
