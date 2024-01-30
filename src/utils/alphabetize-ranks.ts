@@ -64,7 +64,7 @@ function getSorter(order: OrderDirection) {
 
 		result *= multiplier
 
-		// In case the paths are equal (result === 0), sort them by importKind
+		// In case the paths are equal (result === 0), sort them by importKind.
 		if (!result && multiplierImportKind) {
 			result =
 				multiplierImportKind *
@@ -82,24 +82,20 @@ export function mutateRanksToAlphabetize(
 	imported: ImportNodeObject[],
 	alphabetizeOptions: OrderDirection,
 ) {
-	let groupedByRanks: Record<number, ImportNodeObject[]> = groupBy(
-		imported,
-		(item: ImportNodeObject) => item.rank,
-	)
-
+	let groupedByRanks = groupBy(imported, (item) => item.rank)
 	let sorterFunction = getSorter(alphabetizeOptions)
 
-	// Sort group keys so that they can be iterated on in order
+	// Sort group keys so that they can be iterated on in order.
 	let groupRanks = Object.keys(groupedByRanks).sort((a, b) => Number(a) - Number(b))
 
-	// Sort imports locally within their group
+	// Sort imports locally within their group.
 	for (let groupRank of groupRanks) {
 		groupedByRanks[groupRank].sort(sorterFunction)
 	}
 
-	// Assign globally unique rank to each import
+	// Assign a globally unique rank to each import.
 	let newRank = 0
-	let alphabetizedRanks = groupRanks.reduce((accumulator, groupRank) => {
+	let alphabetizedRanks = groupRanks.reduce<Record<string, number>>((accumulator, groupRank) => {
 		for (let importedItem of groupedByRanks[groupRank]) {
 			accumulator[`${importedItem.value}|${importedItem.node.importKind}`] =
 				Number.parseInt(groupRank, 10) + newRank
@@ -109,10 +105,9 @@ export function mutateRanksToAlphabetize(
 		return accumulator
 	}, {})
 
-	// Mutate the original group-rank with alphabetized-rank
-	// eslint-disable-next-line unicorn/no-array-for-each
-	imported.forEach((importedItem) => {
+	// Mutate the original group-rank with alphabetized-rank.
+	for (let importedItem of imported) {
 		importedItem.rank =
 			alphabetizedRanks[`${importedItem.value}|${importedItem.node.importKind}`]
-	})
+	}
 }
