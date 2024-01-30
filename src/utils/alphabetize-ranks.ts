@@ -1,5 +1,3 @@
-import path from 'node:path'
-
 import groupBy from 'object.groupby'
 
 import type { ImportNodeObject } from '../rules/order.js'
