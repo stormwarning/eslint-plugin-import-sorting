@@ -34,8 +34,10 @@ ruleTester.run('order', orderRule, {
 
 				import moduleB from '../../../module-b.js'
 				import moduleD from '../../module-d.js'
-				import moduleA from '../module-a.js'
-				import moduleC from '../module-c.js'
+				import twoThings from '../get-things/get2Things.js'
+				import tenThings from '../get-things/get10Things.js'
+				import moduleA from '../HoverCard/module-c.js'
+				import moduleC from '../Select/module-a.js'
 				import Module from './index.js'
 
 				import styles from './component.module.css'

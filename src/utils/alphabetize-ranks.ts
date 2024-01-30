@@ -1,5 +1,3 @@
-import path from 'node:path'
-
 import groupBy from 'object.groupby'
 
 import type { ImportNodeObject } from '../rules/order.js'
@@ -15,7 +13,7 @@ const DEFAULT_IMPORT_KIND = 'value'
  * @todo Maybe add option to choose between 'natural' and 'literal' sorting.
  */
 function compareString(first: string, second: string) {
-	return first.localeCompare(second, 'en')
+	return first.localeCompare(second, 'en', { numeric: true })
 }
 
 function compareDotSegments(first: string, second: string) {
@@ -27,8 +25,8 @@ function compareDotSegments(first: string, second: string) {
 	if (secondCount < firstCount) return -1
 	if (firstCount < secondCount) return 1
 
-	// If segment length is the same, compare the basename alphabetically.
-	return compareString(path.basename(first), path.basename(second))
+	// If segment length is the same, compare the path alphabetically.
+	return compareString(first, second)
 }
 
 function getSorter(order: OrderDirection) {
