@@ -1,5 +1,13 @@
 # eslint-plugin-import-sorting
 
+## 1.2.0
+
+### Minor Changes
+
+- Allow array values for plugin settings ([#14](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/14))
+  Settings options now accept an array of pattern strings, instead of only a single, more convoluted, RegExp string.
+  Closes #8
+
 ## 1.1.0
 
 ### Minor Changes
