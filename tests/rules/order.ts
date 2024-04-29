@@ -1,4 +1,5 @@
 import { RuleTester } from '@typescript-eslint/rule-tester'
+import dedent from 'dedent'
 
 import orderRule from '../../src/rules/order.js'
 
@@ -6,10 +7,10 @@ const ruleTester = new RuleTester({
 	parser: '@typescript-eslint/parser',
 	parserOptions: {
 		sourceType: 'module',
-		ecmaVersion: 6,
+		ecmaVersion: 'latest',
 	},
 	settings: {
-		'import-sorting/known-framework': /^react(\/|-dom|-router|$)/.source,
+		'import-sorting/known-framework': [/^react(\/|-dom|-router|$)/.source, 'prop-types'],
 		'import-sorting/known-first-party': /^~/.source,
 	},
 })
@@ -17,8 +18,7 @@ const ruleTester = new RuleTester({
 ruleTester.run('order', orderRule, {
 	valid: [
 		{
-			filename: 'module.js',
-			code: `
+			code: dedent`
 				import 'sideEffects.js'
 
 				import fs from 'node:fs'
@@ -47,7 +47,6 @@ ruleTester.run('order', orderRule, {
 	invalid: [
 		// It sorts imports by module source.
 		{
-			filename: 'module.js',
 			code: `
 				import { a, b, c } from 'package/path'
 				import { x, y, z } from 'package'
@@ -61,7 +60,6 @@ ruleTester.run('order', orderRule, {
 
 		// It groups built-in modules separately.
 		{
-			filename: 'module.js',
 			code: `
 				import { x, y, z } from '@scope/package'
 				import fs from 'node:fs'
@@ -77,7 +75,6 @@ ruleTester.run('order', orderRule, {
 
 		// It groups framework modules separately.
 		{
-			filename: 'module.js',
 			code: `
 				import { useState } from 'react'
 				import flatten from 'react-keyed-flatten-children'
@@ -92,7 +89,6 @@ ruleTester.run('order', orderRule, {
 
 		// It groups first-party modules separately.
 		{
-			filename: 'module.js',
 			code: `
 				import A from 'package'
 				import B from '~/components'
@@ -112,7 +108,6 @@ ruleTester.run('order', orderRule, {
 		 */
 		// It sorts local imports by number of dot segments.
 		{
-			filename: 'module.js',
 			code: `
 				import moduleB from '../../module-b.js'
 				import foo from './index.js'
