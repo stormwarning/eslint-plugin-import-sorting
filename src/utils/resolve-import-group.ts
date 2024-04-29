@@ -4,24 +4,32 @@ import type { TSESLint } from '@typescript-eslint/utils'
 
 const moduleRegExp = /^\w/
 function isModule(name: string) {
-	return name && moduleRegExp.test(name)
+	return moduleRegExp.test(name)
 }
 
 const scopedRegExp = /^@[^/]+\/?[^/]+/
 function isScoped(name: string) {
-	return name && scopedRegExp.test(name)
+	return scopedRegExp.test(name)
 }
 
-function isFramework(name: string, pattern: string) {
-	return pattern && new RegExp(pattern).test(name)
+function isFramework(name: string, pattern: string | string[]) {
+	if (Array.isArray(pattern)) {
+		return pattern.some((item) => new RegExp(item).test(name))
+	}
+
+	return new RegExp(pattern).test(name)
 }
 
 function isThirdParty(name: string) {
 	return isModule(name) || isScoped(name)
 }
 
-function isFirstParty(name: string, pattern: string) {
-	return pattern && new RegExp(pattern).test(name)
+function isFirstParty(name: string, pattern: string | string[]) {
+	if (Array.isArray(pattern)) {
+		return pattern.some((item) => new RegExp(item).test(name))
+	}
+
+	return new RegExp(pattern).test(name)
 }
 
 /**
@@ -35,18 +43,34 @@ function isStyle(name: string) {
 	return name.endsWith('.css')
 }
 
-function assertStringSetting(settings: TSESLint.SharedConfigurationSettings, setting: string) {
-	let value = settings[setting]
+function assertString(value: unknown, setting: string) {
+	if (typeof value !== 'string')
+		throw new Error(
+			// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+			`Invalid value for '${setting}': '${value}'.\nExpected 'string', got '${typeof value}' instead.`,
+		)
+}
+
+function validateSetting(settings: TSESLint.SharedConfigurationSettings, setting: string) {
+	let value = settings[setting] as string | string[]
 
 	if (!value) return ''
-	if (typeof value !== 'string') throw new Error(`Invalid value for ${setting}. String expected.`)
+	if (Array.isArray(value)) {
+		for (let item of value) {
+			assertString(item, setting)
+		}
+
+		return value
+	}
+
+	assertString(value, setting)
 
 	return value
 }
 
 export function resolveImportGroup(name: string, settings: TSESLint.SharedConfigurationSettings) {
-	let knownFramework = assertStringSetting(settings, 'import-sorting/known-framework')
-	let knownFirstParty = assertStringSetting(settings, 'import-sorting/known-first-party')
+	let knownFramework = validateSetting(settings, 'import-sorting/known-framework')
+	let knownFirstParty = validateSetting(settings, 'import-sorting/known-first-party')
 
 	if (isBuiltin(name)) return 'builtin'
 	if (isStyle(name)) return 'style'

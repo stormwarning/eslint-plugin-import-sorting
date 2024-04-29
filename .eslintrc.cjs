@@ -44,6 +44,15 @@ const config = {
 		'etc/no-assign-mutated-array': 'off',
 		'etc/prefer-less-than': 'off',
 	},
+
+	overrides: [
+		{
+			files: ['tests/**/*.ts'],
+			rules: {
+				'import/no-extraneous-dependencies': 'off',
+			},
+		},
+	],
 }
 
 module.exports = config
