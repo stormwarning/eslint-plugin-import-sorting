@@ -40,7 +40,9 @@ function isLocal(name: string) {
 }
 
 function isStyle(name: string) {
-	return name.endsWith('.css')
+	return ['.less', '.scss', '.sass', '.styl', '.pcss', '.css', '.sss'].some((extension) =>
+		name.endsWith(extension),
+	)
 }
 
 function assertString(value: unknown, setting: string) {
@@ -55,6 +57,21 @@ function validateSetting(settings: TSESLint.SharedConfigurationSettings, setting
 	let value = settings[setting] as string | string[]
 
 	if (!value) return ''
+
+	if (value && setting === 'import-sorting/known-framework') {
+		// eslint-disable-next-line no-console
+		console.warn(
+			'Deprecated setting: import-sorting/known-framework. This setting will be removed in the next major version of the plugin. Use import-sorting/framework-patterns instead.',
+		)
+	}
+
+	if (value && setting === 'import-sorting/known-first-party') {
+		// eslint-disable-next-line no-console
+		console.warn(
+			'Deprecated setting: import-sorting/known-first-party. This setting will be removed in the next major version of the plugin. Use import-sorting/internal-patterns instead.',
+		)
+	}
+
 	if (Array.isArray(value)) {
 		for (let item of value) {
 			assertString(item, setting)
@@ -71,6 +88,14 @@ function validateSetting(settings: TSESLint.SharedConfigurationSettings, setting
 export function resolveImportGroup(name: string, settings: TSESLint.SharedConfigurationSettings) {
 	let knownFramework = validateSetting(settings, 'import-sorting/known-framework')
 	let knownFirstParty = validateSetting(settings, 'import-sorting/known-first-party')
+
+	if (settings['import-sorting/framework-patterns']) {
+		knownFramework = validateSetting(settings, 'import-sorting/framework-patterns')
+	}
+
+	if (settings['import-sorting/internal-patterns']) {
+		knownFirstParty = validateSetting(settings, 'import-sorting/internal-patterns')
+	}
 
 	if (isBuiltin(name)) return 'builtin'
 	if (isStyle(name)) return 'style'
