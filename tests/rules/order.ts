@@ -11,7 +11,7 @@ const ruleTester = new RuleTester({
 	},
 	settings: {
 		'import-sorting/known-framework': [/^react(\/|-dom|-router|$)/.source, 'prop-types'],
-		'import-sorting/known-first-party': /^~/.source,
+		'import-sorting/internal-patterns': /^~/.source,
 	},
 })
 
