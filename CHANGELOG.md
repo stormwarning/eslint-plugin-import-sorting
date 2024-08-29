@@ -1,5 +1,15 @@
 # eslint-plugin-import-sorting
 
+## 1.2.1
+
+### Patch Changes
+
+- Deprecate plugin settings ([#19](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/19))
+  The next major version of the plugin will use
+
+  - `import-sorting/framework-patterns` instead of `known-framework`
+  - `import-sorting/internal-patterns` instead of `known-first-party`
+
 ## 1.2.0
 
 ### Minor Changes
