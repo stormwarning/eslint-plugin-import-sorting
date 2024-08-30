@@ -1,6 +1,6 @@
 import type { TSESTree } from '@typescript-eslint/utils'
 
-import type { IMPORT_GROUPS } from '../rules/new-order.js'
+import type { IMPORT_GROUPS } from '../rules/order.js'
 
 export type ImportDeclarationNode =
 	| TSESTree.TSImportEqualsDeclaration

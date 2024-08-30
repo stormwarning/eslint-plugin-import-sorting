@@ -6,19 +6,19 @@ Enforce a convention in the order of `import` statements.
 
 ## Settings
 
-The framework and first-party groups can be configured by passing a RegEx
+The framework and internal groups can be configured by passing a RegEx
 string to the different plugin setting. This allows the rule itself to be
 implemented by a shared config, while individual projects can determine what
-constitutes a “first-party” module.
+constitutes an “internal” module.
 
 For example:
 
 ```js
 settings: {
 	// Group official React packages together.
-	'import-sorting/known-framework': /^react(\/|-dom|-router|$)/.source,
+	'import-sorting/framework-patterns': /^react(\/|-dom|-router|$)/.source,
 	// Group aliased imports together.
-	'import-sorting/known-first-party': /^~/.source,
+	'import-sorting/internal-patterns': /^~/.source,
 },
 rules: {
 	'import-sorting/order': 'error',

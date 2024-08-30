@@ -2,7 +2,7 @@ import { builtinModules } from 'node:module'
 
 import { AST_NODE_TYPES, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 
-import { IMPORT_GROUPS } from '../rules/new-order.js'
+import { IMPORT_GROUPS } from '../rules/order.js'
 import type { ImportDeclarationNode } from './types.js'
 import { useGroups } from './use-groups.js'
 
