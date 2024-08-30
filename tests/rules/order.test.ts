@@ -18,157 +18,311 @@ describe('order', () => {
 			sourceType: 'module',
 			ecmaVersion: 'latest',
 		},
+		// Use this after upgrade to eslint@9.
+		// languageOptions: { ecmaVersion: 'latest', sourceType: 'module' },
 		settings: {
 			'import-sorting/framework-patterns': [/^react(\/|-dom|-router|$)/.source, 'prop-types'],
 			'import-sorting/internal-patterns': /^~/.source,
 		},
 	})
 
-	ruleTester.run('sorts imports', orderRule, {
-		valid: [
-			{
-				name: 'without errors',
-				code: dedent`
-					import { a1, a2 } from 'a'
-					import { b1 } from 'b'
-				`,
-			},
-		],
-		invalid: [
-			{
-				name: 'fixes import order',
-				code: dedent`
-					import { b1 } from 'b'
-					import { a1, a2 } from 'a'
-				`,
-				// Not sure why this extra line break is needed...
-				output: dedent`
-					import { a1, a2 } from 'a'
-					import { b1 } from 'b'\n
-				`,
-				errors: [{ messageId: 'out-of-order' }],
-			},
-		],
-	})
+	describe('sorting by natural order', () => {
+		ruleTester.run('sorts imports', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import { a1, a2 } from 'a'
+						import { b1 } from 'b'
+					`,
+				},
+			],
+			invalid: [
+				{
+					name: 'fixes import order',
+					code: dedent`
+						import { b1 } from 'b'
+						import { a1, a2 } from 'a'
+					`,
+					output: dedent`
+						import { a1, a2 } from 'a'
+						import { b1 } from 'b'
+					`,
+					errors: [
+						{
+							messageId: 'out-of-order',
+							data: {
+								left: 'b',
+								right: 'a',
+							},
+						},
+					],
+				},
+			],
+		})
 
-	ruleTester.run('sorts imports into groups', orderRule, {
-		valid: [
-			{
-				name: 'without errors',
-				code: dedent`
-					import 'sideEffects.js'
+		ruleTester.run('sorts imports into groups', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import 'sideEffects.js'
 
-					import fs from 'node:fs'
+						import fs from 'node:fs'
 
-					import { useState } from 'react'
+						import { useState } from 'react'
 
-					import { x, y, z } from '@scope/package'
-					import { a, b, c } from 'package'
-					import Thing, { method } from 'package/path'
-					import flatten from 'react-keyed-flatten-children'
+						import { x, y, z } from '@scope/package'
+						import { a, b, c } from 'package'
+						import Thing, { method } from 'package/path'
+						import flatten from 'react-keyed-flatten-children'
 
-					import { Component } from '~/components'
+						import { Component } from '~/components'
 
-					import moduleB from '../../../module-b.js'
-					import moduleD from '../../module-d.js'
-					import twoThings from '../get-things/get2Things.js'
-					import tenThings from '../get-things/get10Things.js'
-					import moduleC from '../HoverCard/module-c.js'
-					import moduleA from '../Select/module-a.js'
-					import Module from './index.js'
+						import moduleB from '../../../module-b.js'
+						import moduleD from '../../module-d.js'
+						import twoThings from '../get-things/get2Things.js'
+						import tenThings from '../get-things/get10Things.js'
+						import moduleC from '../HoverCard/module-c.js'
+						import moduleA from '../Select/module-a.js'
+						import Module from './index.js'
 
-					import styles from './component.module.css'
-				`,
-			},
-		],
-		invalid: [
-			// Not currently handling unassigned imports.
-			// {
-			// 	name: 'groups unassigned modules without sorting',
-			// 	code: dedent`
-			// 		import { a1 } from 'a'
-			// 		import './zero.js'
-			// 		import './one.js'
-			// 	`,
-			// 	output: dedent`
-			// 		import './zero.js'
-			// 		import './one.js'
+						import styles from './component.module.css'
+					`,
+				},
+			],
+			invalid: [
+				{
+					name: 'groups unassigned modules without sorting',
+					code: dedent`
+						import { a1 } from 'a'
+						import './zero.js'
+						import './one.js'
+					`,
+					output: dedent`
+						import './zero.js'
+						import './one.js'
 
-			// 		import { a1 } from 'a'
-			// 	`,
-			// 	errors: [{ messageId: 'out-of-order' }],
-			// },
+						import { a1 } from 'a'
+					`,
+					errors: [{ messageId: 'out-of-order' }],
+				},
 
-			// {
-			// 	name: 'groups builtin modules together',
-			// 	code: dedent`
-			// 		import path from 'path'
-			// 		import { t1 } from 't'
-			// 		import url from 'node:url'
-			// 	`,
-			// 	output: dedent`
-			// 		import path from 'path'
-			// 		import url from 'node:url'
-			// 		import { t1 } from 't'
-			// 	`,
-			// 	errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
-			// },
+				{
+					name: 'groups builtin modules together',
+					code: dedent`
+						import path from 'path'
+						import { t1 } from 't'
+						import url from 'node:url'
+					`,
+					output: dedent`
+						import path from 'path'
+						import url from 'node:url'
 
-			{
-				name: 'groups framework modules together',
-				code: dedent`
-					import { useState } from 'react'
-					import flatten from 'react-keyed-flatten-children'
-				`,
-				output: dedent`
-					import { useState } from 'react'
+						import { t1 } from 't'
+					`,
+					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
+				},
 
-					import flatten from 'react-keyed-flatten-children'
-				`,
-				errors: [{ messageId: 'needs-newline' }],
-			},
+				{
+					name: 'groups framework modules together',
+					code: dedent`
+						import { useState } from 'react'
+						import flatten from 'react-keyed-flatten-children'
+						import propTypes from 'prop-types'
+					`,
+					output: dedent`
+						import propTypes from 'prop-types'
+						import { useState } from 'react'
 
-			{
-				name: 'groups internal modules together',
-				code: dedent`
-					import A from 'package'
-					import B from '~/components'
-				`,
-				output: dedent`
-					import A from 'package'
+						import flatten from 'react-keyed-flatten-children'
+					`,
+					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
+				},
 
-					import B from '~/components'
-				`,
-				errors: [{ messageId: 'needs-newline' }],
-			},
+				{
+					name: 'groups internal modules together',
+					code: dedent`
+						import A from 'package'
+						import B from '~/components'
+					`,
+					output: dedent`
+						import A from 'package'
 
-			// Test seems flaky with this many imports; disabling for now.
-			// {
-			// 	name: 'sorts local paths by dot segments',
-			// 	code: dedent`
-			// 		import tenThings from '../get-things/get10Things.js'
-			// 		import twoThings from '../get-things/get2Things.js'
-			// 		import moduleC from '../Hovercard/module-c.js'
-			// 		import Module from './index.js'
-			// 		import moduleB from '../../module-b.js'
-			// 		import moduleD from '../../../module-d.js'
-			// 		import moduleA from '../Select/module-a.js'
-			// 	`,
-			// 	output: dedent`
-			// 		import moduleD from '../../../module-d.js'
-			// 		import moduleB from '../../module-b.js'
-			// 		import twoThings from '../get-things/get2Things.js'
-			// 		import tenThings from '../get-things/get10Things.js'
-			// 		import moduleC from '../Hovercard/module-c.js'
-			// 		import moduleA from '../Select/module-a.js'
-			// 		import Module from './index.js'
-			// 	`,
-			// 	errors: [
-			// 		{ messageId: 'out-of-order' },
-			// 		{ messageId: 'out-of-order' },
-			// 		{ messageId: 'out-of-order' },
-			// 	],
-			// },
-		],
+						import B from '~/components'
+					`,
+					errors: [{ messageId: 'needs-newline' }],
+				},
+
+				{
+					name: 'sorts local paths by dot segments',
+					code: dedent`
+						import tenThings from '../get-things/get10Things.js'
+						import twoThings from '../get-things/get2Things.js'
+						import moduleC from '../Hovercard/module-c.js'
+						import Module from './index.js'
+						import moduleB from '../../module-b.js'
+						import moduleD from '../../../module-d.js'
+						import moduleA from '../Select/module-a.js'
+					`,
+					output: dedent`
+						import moduleD from '../../../module-d.js'
+						import moduleB from '../../module-b.js'
+						import twoThings from '../get-things/get2Things.js'
+						import tenThings from '../get-things/get10Things.js'
+						import moduleC from '../Hovercard/module-c.js'
+						import moduleA from '../Select/module-a.js'
+						import Module from './index.js'
+					`,
+					errors: [
+						{ messageId: 'out-of-order' },
+						{ messageId: 'out-of-order' },
+						{ messageId: 'out-of-order' },
+					],
+				},
+
+				{
+					name: 'groups style imports together',
+					code: dedent`
+						import styles from './component.module.css'
+						import rootStyles from '../root.module.css'
+						import component from 'kit'
+						import componentStyles from 'kit/component.css'
+						import './global.css'
+					`,
+					output: dedent`
+						import './global.css'
+
+						import component from 'kit'
+
+						import componentStyles from 'kit/component.css'
+						import rootStyles from '../root.module.css'
+						import styles from './component.module.css'
+					`,
+					errors: [
+						{ messageId: 'out-of-order' },
+						{ messageId: 'out-of-order' },
+						{ messageId: 'needs-newline' },
+						{ messageId: 'out-of-order' },
+					],
+				},
+			],
+		})
+
+		ruleTester.run('supports typescript object-imports', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import { a1, a2 } from 'a'
+						import { b1 } from 'b'
+
+						import c = require('c/c')
+						import log = console.log
+						import type T = require('T')
+					`,
+				},
+			],
+			invalid: [],
+		})
+
+		ruleTester.run('starts a new grouping context after non-import nodes', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import { b1, b2 } from 'b'
+						import d from 'd'
+
+						export { e } from 'e'
+
+						import { a } from 'a'
+						import { c } from 'c'
+					`,
+				},
+			],
+			invalid: [
+				{
+					name: 'sorts import blocks separately',
+					code: dedent`
+						import d from 'd'
+						import { b1, b2 } from 'b'
+
+						export { e } from 'e'
+
+						import { c } from 'c'
+						import { a } from 'a'
+					`,
+					output: dedent`
+						import { b1, b2 } from 'b'
+						import d from 'd'
+
+						export { e } from 'e'
+
+						import { a } from 'a'
+						import { c } from 'c'
+					`,
+					errors: [{ messageId: 'out-of-order' }, { messageId: 'out-of-order' }],
+				},
+			],
+		})
+
+		ruleTester.run('ignores comments when counting lines between imports', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import { a } from 'a'
+						// @ts-expect-error missing types
+						import { c } from 'c'
+					`,
+				},
+			],
+			invalid: [
+				{
+					name: 'preserves block comments',
+					code: dedent`
+						import fs from 'node:fs'
+
+						import { b } from 'b'
+						/* Comment */
+						import { c } from '~/c'
+						import { a } from 'a'
+					`,
+					output: dedent`
+						import fs from 'node:fs'
+
+						import { a } from 'a'
+						import { b } from 'b'
+
+						/* Comment */
+						import { c } from '~/c'
+					`,
+					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
+				},
+
+				{
+					name: 'preserves line comments',
+					code: dedent`
+						import fs from 'node:fs'
+
+						import { b } from 'b'
+						// Comment
+						import { c } from '~/c'
+						import { a } from 'a'
+					`,
+					output: dedent`
+						import fs from 'node:fs'
+
+						import { a } from 'a'
+						import { b } from 'b'
+
+						// Comment
+						import { c } from '~/c'
+					`,
+					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
+				},
+			],
+		})
 	})
 })

@@ -1,115 +1,26 @@
-import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
-import type { ImportDeclaration } from 'estree'
+import { AST_NODE_TYPES, ESLintUtils, type TSESTree, type TSESLint } from '@typescript-eslint/utils'
 
-import { mutateRanksToAlphabetize } from '../utils/alphabetize-ranks.js'
-import { makeNewlinesBetweenReport } from '../utils/make-newlines-between-report.js'
-import { makeOutOfOrderReport } from '../utils/make-out-of-order-report.js'
-import { resolveImportGroup } from '../utils/resolve-import-group.js'
+import { compare } from '../utils/compare.js'
+import { computeGroup, isSideEffectImport } from '../utils/compute-group.js'
+import { getCommentBefore } from '../utils/get-comment.js'
+import { getGroupNumber } from '../utils/get-group-number.js'
+import { getLinesBetween } from '../utils/get-lines-between.js'
+import { getNodeRange } from '../utils/get-node-range.js'
+import { pairwise } from '../utils/pairwise.js'
+import { sortNodes } from '../utils/sort-nodes.js'
+import type { ImportDeclarationNode, Options, SortingNode } from '../utils/types.js'
 
-const IMPORT_GROUPS = [
+export const IMPORT_GROUPS = [
+	'unassigned',
 	'builtin',
 	'framework',
-	'thirdparty',
-	'firstparty',
+	'external',
+	'internal',
 	'local',
 	'style',
+	'object',
 	'unknown',
 ] as const
-
-type ImportGroup = (typeof IMPORT_GROUPS)[number]
-type GroupRankMap = Record<(typeof IMPORT_GROUPS)[number], number>
-
-export type ImportNode = (TSESTree.ImportDeclaration | TSESTree.TSImportEqualsDeclaration) & {
-	parent: TSESTree.Node
-}
-
-type ImportName = ImportDeclaration['source']['value']
-
-export interface ImportNodeObject {
-	node: ImportNode // & { importKind?: string }
-	value: ImportName
-	displayName: ImportName
-	type: 'import' | 'import:object'
-	rank: number
-}
-
-interface RankObject {
-	groups: GroupRankMap
-	omittedTypes: ImportGroup[]
-}
-
-function computeRank(
-	settings: TSESLint.SharedConfigurationSettings,
-	importEntry: ImportNodeObject,
-	ranks: RankObject,
-) {
-	let kind: ImportGroup = resolveImportGroup(importEntry.value as string, settings)
-	let rank: number
-
-	/**
-	 * @todo Update to allow `type` as a group.
-	 */
-	// if (importEntry.type === 'import:object') {
-	// 	kind = 'object'
-	// } else if (importEntry.node.importKind === 'type' && !ranks.omittedTypes.includes('type')) {
-	// 	kind = 'type'
-	// } else {
-	// 	kind = resolveImportGroup(importEntry.value, context)
-	// }
-
-	rank = ranks.groups[kind]
-
-	if (importEntry.type !== 'import' && !importEntry.type.startsWith('import:')) {
-		rank += 100
-	}
-
-	return rank
-}
-
-function registerNode(
-	settings: TSESLint.SharedConfigurationSettings,
-	importEntry: ImportNodeObject,
-	ranks: RankObject,
-	imported?: unknown[],
-) {
-	let rank = computeRank(settings, importEntry, ranks)
-	if (rank !== -1) {
-		imported?.push({ ...importEntry, rank })
-	}
-}
-
-function convertGroupsToRanks(groups: typeof IMPORT_GROUPS) {
-	let rankObject = groups.reduce((result, group, index) => {
-		for (let groupItem of [group].flat()) {
-			if (!IMPORT_GROUPS.includes(groupItem)) {
-				throw new Error(
-					`Incorrect configuration of the rule: Unknown type \`${JSON.stringify(
-						groupItem,
-					)}\``,
-				)
-			}
-
-			if (result[groupItem] !== undefined) {
-				throw new Error(
-					`Incorrect configuration of the rule: \`${groupItem}\` is duplicated`,
-				)
-			}
-
-			result[groupItem] = index * 2
-		}
-
-		return result
-	}, {} as GroupRankMap)
-
-	let omittedTypes = IMPORT_GROUPS.filter((type) => rankObject[type] === undefined)
-
-	let ranks = omittedTypes.reduce((result, type) => {
-		result[type] = groups.length * 2
-		return result
-	}, rankObject)
-
-	return { groups: ranks, omittedTypes }
-}
 
 // eslint-disable-next-line new-cap
 const createRule = ESLintUtils.RuleCreator(
@@ -120,103 +31,254 @@ const createRule = ESLintUtils.RuleCreator(
 export default createRule({
 	name: 'order',
 	meta: {
-		type: 'layout',
+		type: 'suggestion',
 		fixable: 'code',
 		docs: {
 			description: 'Enforce a convention in the order of `import` statements.',
 		},
 		messages: {
-			'needs-newline': 'There should be at least one empty line between import groups',
-			'extra-newline': 'There should be no empty line between import groups',
-			'extra-newline-in-group': 'There should be no empty line within import group',
-			'out-of-order': '{{secondImport}} should occur {{order}} {{firstImport}}',
+			'needs-newline':
+				'There should be at least one empty line between {{left}} and {{right}}',
+			'extra-newline': 'There should be no empty line between {{left}} and {{right}}',
+			'out-of-order': '{{right}} should occur before {{left}}',
 		},
 		schema: [],
 	},
 	defaultOptions: [],
 	create(context) {
-		let importMap = new Map<ImportNode, ImportNodeObject[]>()
-		let { groups, omittedTypes } = convertGroupsToRanks(IMPORT_GROUPS)
-		let ranks: RankObject = {
-			groups,
-			omittedTypes,
+		let { settings, sourceCode } = context
+		let options: Options = {
+			ignoreCase: true,
+			newlinesBetween: 'always',
+			order: 'asc',
+			type: 'natural',
 		}
+		let nodes: SortingNode[] = []
 
-		function getBlockImports(node: ImportNode) {
-			if (!importMap.has(node)) {
-				importMap.set(node, [])
+		function registerNode(node: ImportDeclarationNode) {
+			let name: string
+
+			if (node.type === AST_NODE_TYPES.ImportDeclaration) {
+				name = node.source.value
+			} else if (node.type === AST_NODE_TYPES.TSImportEqualsDeclaration) {
+				name =
+					node.moduleReference.type === AST_NODE_TYPES.TSExternalModuleReference
+						? // @ts-expect-error -- `value` is not in the type definition.
+						  `${node.moduleReference.expression.value}`
+						: sourceCode.text.slice(...node.moduleReference.range)
+			} else {
+				let decl = node.declarations[0].init as TSESTree.CallExpression
+				let declValue = (decl.arguments[0] as TSESTree.Literal).value
+				name = declValue!.toString()
 			}
 
-			return importMap.get(node)
+			nodes.push({
+				group: computeGroup(node, settings, sourceCode),
+				node,
+				name,
+			})
 		}
 
 		return {
-			ImportDeclaration(node) {
-				// Ignore unassigned imports.
-				if (node.specifiers.length > 0) {
-					let name = node.source.value
-					registerNode(
-						context.settings,
-						{
-							node,
-							value: name,
-							displayName: name,
-							type: 'import',
-							/** @todo Check that setting this to a value doesn't cause problems. */
-							rank: 0,
-						},
-						ranks,
-						/** @todo Maybe get better types for `parent` property? */
-						getBlockImports(node.parent as ImportNode),
-					)
+			TSImportEqualsDeclaration: registerNode,
+			ImportDeclaration: registerNode,
+			VariableDeclaration(node) {
+				if (
+					node.declarations[0].init &&
+					node.declarations[0].init.type === AST_NODE_TYPES.CallExpression &&
+					node.declarations[0].init.callee.type === AST_NODE_TYPES.Identifier &&
+					node.declarations[0].init.callee.name === 'require' &&
+					node.declarations[0].init.arguments[0]?.type === AST_NODE_TYPES.Literal
+				) {
+					registerNode(node)
 				}
 			},
-			TSImportEqualsDeclaration(node) {
-				// @ts-expect-error -- Probably don't need this check.
-				if (node.isExport) return
-
-				let displayName: string
-				let value: string
-				let type: 'import' | 'import:object'
-
-				if (node.moduleReference.type === AST_NODE_TYPES.TSExternalModuleReference) {
-					/** @todo Not sure how to properly type this property. */
-					// @ts-expect-error -- Need a narrower type for `expression` property.
-					value = node.moduleReference.expression.value as string
-					displayName = value
-					type = 'import'
-				} else {
-					value = ''
-					displayName = context.sourceCode.getText(node.moduleReference)
-					type = 'import:object'
-				}
-
-				registerNode(
-					context,
-					{
-						node,
-						value,
-						displayName,
-						type,
-						/** @todo Check that setting this to a value doesn't cause problems. */
-						rank: 0,
-					},
-					ranks,
-					/** @todo Maybe get better types for `parent` property? */
-					getBlockImports(node.parent as ImportNode),
-				)
-			},
+			// eslint-disable-next-line @typescript-eslint/naming-convention
 			'Program:exit'() {
-				// This is using the Map `forEach` method, not the array method.
-				// eslint-disable-next-line unicorn/no-array-for-each
-				importMap.forEach((imported) => {
-					makeNewlinesBetweenReport(context, imported, 'always')
-					mutateRanksToAlphabetize(imported, 'asc')
-					makeOutOfOrderReport(context, imported)
-				})
+				let hasContentBetweenNodes = (left: SortingNode, right: SortingNode): boolean =>
+					sourceCode.getTokensBetween(
+						left.node,
+						getCommentBefore(right.node, sourceCode) ?? right.node,
+						{
+							includeComments: true,
+						},
+					).length > 0
 
-				importMap.clear()
+				let splittedNodes: SortingNode[][] = [[]]
+
+				for (let node of nodes) {
+					let lastNode = splittedNodes.at(-1)?.at(-1)
+
+					if (lastNode && hasContentBetweenNodes(lastNode, node)) {
+						splittedNodes.push([node])
+					} else {
+						splittedNodes.at(-1)!.push(node)
+					}
+				}
+
+				for (let nodeList of splittedNodes) {
+					pairwise(nodeList, (left, right) => {
+						let leftNumber = getGroupNumber(IMPORT_GROUPS, left)
+						let rightNumber = getGroupNumber(IMPORT_GROUPS, right)
+
+						let numberOfEmptyLinesBetween = getLinesBetween(sourceCode, left, right)
+
+						if (
+							!(
+								isSideEffectImport(left.node, sourceCode) &&
+								isSideEffectImport(right.node, sourceCode)
+							) &&
+							!hasContentBetweenNodes(left, right) &&
+							(leftNumber > rightNumber ||
+								(leftNumber === rightNumber && compare(left, right, options) > 0))
+						) {
+							context.report({
+								messageId: 'out-of-order',
+								data: {
+									left: left.name,
+									right: right.name,
+								},
+								node: right.node,
+								fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
+							})
+						}
+
+						if (options.newlinesBetween === 'never' && numberOfEmptyLinesBetween > 0) {
+							context.report({
+								messageId: 'extra-newline',
+								data: {
+									left: left.name,
+									right: right.name,
+								},
+								node: right.node,
+								fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
+							})
+						}
+
+						if (options.newlinesBetween === 'always') {
+							if (leftNumber < rightNumber && numberOfEmptyLinesBetween === 0) {
+								context.report({
+									messageId: 'needs-newline',
+									data: {
+										left: left.name,
+										right: right.name,
+									},
+									node: right.node,
+									fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
+								})
+							} else if (
+								numberOfEmptyLinesBetween > 1 ||
+								(leftNumber === rightNumber && numberOfEmptyLinesBetween > 0)
+							) {
+								context.report({
+									messageId: 'extra-newline',
+									data: {
+										left: left.name,
+										right: right.name,
+									},
+									node: right.node,
+									fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
+								})
+							}
+						}
+					})
+				}
 			},
 		}
 	},
 })
+
+function fix(
+	fixer: TSESLint.RuleFixer,
+	nodesToFix: SortingNode[],
+	sourceCode: TSESLint.SourceCode,
+	options: Options,
+): TSESLint.RuleFix[] {
+	let fixes: TSESLint.RuleFix[] = []
+	let grouped: Record<string, SortingNode[]> = {}
+
+	for (let node of nodesToFix) {
+		let groupNumber = getGroupNumber(IMPORT_GROUPS, node)
+
+		grouped[groupNumber] =
+			groupNumber in grouped ? sortNodes([...grouped[groupNumber], node], options) : [node]
+	}
+
+	let formatted = Object.keys(grouped)
+		.sort((a, b) => Number(a) - Number(b))
+		.reduce(
+			(accumulator: SortingNode[], group: string) => [...accumulator, ...grouped[group]],
+			[],
+		)
+
+	for (let max = formatted.length, index = 0; index < max; index++) {
+		let node = formatted.at(index)!
+
+		fixes.push(
+			fixer.replaceTextRange(
+				getNodeRange(nodesToFix.at(index)!.node, sourceCode),
+				sourceCode.text.slice(...getNodeRange(node.node, sourceCode)),
+			),
+		)
+
+		if (options.newlinesBetween !== 'ignore') {
+			let nextNode = formatted.at(index + 1)
+
+			if (nextNode) {
+				let linesBetweenImports = getLinesBetween(
+					sourceCode,
+					nodesToFix.at(index)!,
+					nodesToFix.at(index + 1)!,
+				)
+
+				if (
+					(options.newlinesBetween === 'always' &&
+						getGroupNumber(IMPORT_GROUPS, node) ===
+							getGroupNumber(IMPORT_GROUPS, nextNode) &&
+						linesBetweenImports !== 0) ||
+					(options.newlinesBetween === 'never' && linesBetweenImports > 0)
+				) {
+					fixes.push(
+						fixer.removeRange([
+							getNodeRange(nodesToFix.at(index)!.node, sourceCode).at(1)!,
+							getNodeRange(nodesToFix.at(index + 1)!.node, sourceCode).at(0)! - 1,
+						]),
+					)
+				}
+
+				if (
+					options.newlinesBetween === 'always' &&
+					getGroupNumber(IMPORT_GROUPS, node) !==
+						getGroupNumber(IMPORT_GROUPS, nextNode) &&
+					linesBetweenImports > 1
+				) {
+					fixes.push(
+						fixer.replaceTextRange(
+							[
+								getNodeRange(nodesToFix.at(index)!.node, sourceCode).at(1)!,
+								getNodeRange(nodesToFix.at(index + 1)!.node, sourceCode).at(0)! - 1,
+							],
+							'\n',
+						),
+					)
+				}
+
+				if (
+					options.newlinesBetween === 'always' &&
+					getGroupNumber(IMPORT_GROUPS, node) !==
+						getGroupNumber(IMPORT_GROUPS, nextNode) &&
+					linesBetweenImports === 0
+				) {
+					fixes.push(
+						fixer.insertTextAfterRange(
+							getNodeRange(nodesToFix.at(index)!.node, sourceCode),
+							'\n',
+						),
+					)
+				}
+			}
+		}
+	}
+
+	return fixes
+}
