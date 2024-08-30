@@ -225,5 +225,104 @@ describe('order', () => {
 			],
 			invalid: [],
 		})
+
+		ruleTester.run('starts a new grouping context after non-import nodes', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import { b1, b2 } from 'b'
+						import d from 'd'
+
+						export { e } from 'e'
+
+						import { a } from 'a'
+						import { c } from 'c'
+					`,
+				},
+			],
+			invalid: [
+				{
+					name: 'sorts import blocks separately',
+					code: dedent`
+						import d from 'd'
+						import { b1, b2 } from 'b'
+
+						export { e } from 'e'
+
+						import { c } from 'c'
+						import { a } from 'a'
+					`,
+					output: dedent`
+						import { b1, b2 } from 'b'
+						import d from 'd'
+
+						export { e } from 'e'
+
+						import { a } from 'a'
+						import { c } from 'c'
+					`,
+					errors: [{ messageId: 'out-of-order' }, { messageId: 'out-of-order' }],
+				},
+			],
+		})
+
+		ruleTester.run('ignores comments when counting lines between imports', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import { a } from 'a'
+						// @ts-expect-error missing types
+						import { c } from 'c'
+					`,
+				},
+			],
+			invalid: [
+				{
+					name: 'preserves block comments',
+					code: dedent`
+						import fs from 'node:fs'
+
+						import { b } from 'b'
+						/* Comment */
+						import { c } from '~/c'
+						import { a } from 'a'
+					`,
+					output: dedent`
+						import fs from 'node:fs'
+
+						import { a } from 'a'
+						import { b } from 'b'
+
+						/* Comment */
+						import { c } from '~/c'
+					`,
+					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
+				},
+
+				{
+					name: 'preserves line comments',
+					code: dedent`
+						import fs from 'node:fs'
+
+						import { b } from 'b'
+						// Comment
+						import { c } from '~/c'
+						import { a } from 'a'
+					`,
+					output: dedent`
+						import fs from 'node:fs'
+
+						import { a } from 'a'
+						import { b } from 'b'
+
+						// Comment
+						import { c } from '~/c'
+					`,
+					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
+				},
+			],
+		})
 	})
 })
