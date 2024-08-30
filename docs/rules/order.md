@@ -4,6 +4,16 @@
 
 Enforce a convention in the order of `import` statements.
 
+The grouping order is as follows:
+
+1. Unassigned imports (only grouped, existing order is preserved)
+2. Node/Bun standard modules (protocol is ignored when sorting)
+3. Framework modules (see below)
+4. External modules
+5. Internal modules (see below)
+6. Explicitly local modules (paths starting with a dot segment)
+7. Style imports
+
 ## Settings
 
 The framework and internal groups can be configured by passing a RegEx
