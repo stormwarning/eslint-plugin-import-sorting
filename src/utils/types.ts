@@ -22,5 +22,5 @@ export interface Options {
 	ignoreCase: boolean
 	newlinesBetween: 'ignore' | 'always' | 'never'
 	order: 'asc' | 'desc'
-	type: 'alphabetical' | 'natural'
+	type: 'natural'
 }

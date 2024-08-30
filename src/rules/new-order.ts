@@ -40,7 +40,6 @@ export default createRule({
 			'needs-newline':
 				'There should be at least one empty line between {{left}} and {{right}}',
 			'extra-newline': 'There should be no empty line between {{left}} and {{right}}',
-			// 'extra-newline-in-group': 'There should be no empty line within import group',
 			'out-of-order': '{{right}} should occur before {{left}}',
 		},
 		schema: [],
