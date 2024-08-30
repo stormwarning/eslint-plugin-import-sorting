@@ -109,6 +109,7 @@ describe(RULE_NAME, () => {
 					`,
 					errors: [{ messageId: 'out-of-order' }],
 				},
+
 				{
 					name: 'groups builtin modules together',
 					code: dedent`
@@ -124,6 +125,37 @@ describe(RULE_NAME, () => {
 					`,
 					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
 				},
+
+				{
+					name: 'groups framework modules together',
+					code: dedent`
+						import { useState } from 'react'
+						import flatten from 'react-keyed-flatten-children'
+						import propTypes from 'prop-types'
+					`,
+					output: dedent`
+						import propTypes from 'prop-types'
+						import { useState } from 'react'
+
+						import flatten from 'react-keyed-flatten-children'
+					`,
+					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
+				},
+
+				{
+					name: 'groups internal modules together',
+					code: dedent`
+						import A from 'package'
+						import B from '~/components'
+					`,
+					output: dedent`
+						import A from 'package'
+
+						import B from '~/components'
+					`,
+					errors: [{ messageId: 'needs-newline' }],
+				},
+
 				{
 					name: 'sorts local paths by dot segments',
 					code: dedent`
@@ -150,7 +182,50 @@ describe(RULE_NAME, () => {
 						{ messageId: 'out-of-order' },
 					],
 				},
+
+				{
+					name: 'groups style imports together',
+					code: dedent`
+						import styles from './component.module.css'
+						import rootStyles from '../root.module.css'
+						import component from 'kit'
+						import componentStyles from 'kit/component.css'
+						import './global.css'
+					`,
+					output: dedent`
+						import './global.css'
+
+						import component from 'kit'
+
+						import componentStyles from 'kit/component.css'
+						import rootStyles from '../root.module.css'
+						import styles from './component.module.css'
+					`,
+					errors: [
+						{ messageId: 'out-of-order' },
+						{ messageId: 'out-of-order' },
+						{ messageId: 'needs-newline' },
+						{ messageId: 'out-of-order' },
+					],
+				},
 			],
+		})
+
+		ruleTester.run('supports typescript object-imports', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						import { a1, a2 } from 'a'
+						import { b1 } from 'b'
+
+						import c = require('c/c')
+						import log = console.log
+						import type T = require('T')
+					`,
+				},
+			],
+			invalid: [],
 		})
 	})
 })
