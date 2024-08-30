@@ -1,7 +1,6 @@
 import { ASTUtils, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 
 import { getCommentBefore } from './get-comment.js'
-import { isPartitionComment } from './is-partition-comment.js'
 
 export function getNodeRange(
 	node: TSESTree.Node,
@@ -37,10 +36,7 @@ export function getNodeRange(
 		}
 	}
 
-	if (
-		comment &&
-		!isPartitionComment(additionalOptions?.partitionComment ?? false, comment.value)
-	) {
+	if (comment) {
 		start = comment.range.at(0)!
 	}
 
