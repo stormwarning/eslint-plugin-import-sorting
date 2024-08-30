@@ -9,8 +9,20 @@ import { getLinesBetween } from '../utils/get-lines-between.js'
 import { getNodeRange } from '../utils/get-node-range.js'
 import { pairwise } from '../utils/pairwise.js'
 import { sortNodes } from '../utils/sort-nodes.js'
-import type { Options, SortingNode } from '../utils/types'
+import type { ImportDeclarationNode, Options, SortingNode } from '../utils/types.js'
 import { useGroups } from '../utils/use-groups.js'
+
+export const IMPORT_GROUPS = [
+	'unassigned',
+	'builtin',
+	'framework',
+	'external',
+	'internal',
+	'local',
+	'style',
+	'object',
+	'unknown',
+] as const
 
 // eslint-disable-next-line new-cap
 const createRule = ESLintUtils.RuleCreator(
@@ -39,17 +51,6 @@ export default createRule({
 	create(context) {
 		let { settings, sourceCode } = context
 		let options: Options = {
-			groups: [
-				'unassigned',
-				'builtin',
-				'framework',
-				'external',
-				'internal',
-				'local',
-				'style',
-				'object',
-				'unknown',
-			],
 			ignoreCase: true,
 			newlinesBetween: 'always',
 			order: 'asc',
@@ -57,12 +58,7 @@ export default createRule({
 		}
 		let nodes: SortingNode[] = []
 
-		function registerNode(
-			node:
-				| TSESTree.TSImportEqualsDeclaration
-				| TSESTree.VariableDeclaration
-				| TSESTree.ImportDeclaration,
-		) {
+		function registerNode(node: ImportDeclarationNode) {
 			let name: string
 
 			if (node.type === AST_NODE_TYPES.ImportDeclaration) {
@@ -100,6 +96,7 @@ export default createRule({
 					registerNode(node)
 				}
 			},
+			// eslint-disable-next-line @typescript-eslint/naming-convention
 			'Program:exit'() {
 				let hasContentBetweenNodes = (left: SortingNode, right: SortingNode): boolean =>
 					sourceCode.getTokensBetween(
@@ -119,7 +116,7 @@ export default createRule({
 					let grouped: Record<string, SortingNode[]> = {}
 
 					for (let node of nodesToFix) {
-						let groupNumber = getGroupNumber(options.groups, node)
+						let groupNumber = getGroupNumber(IMPORT_GROUPS, node)
 
 						grouped[groupNumber] =
 							groupNumber in grouped
@@ -159,8 +156,8 @@ export default createRule({
 
 								if (
 									(options.newlinesBetween === 'always' &&
-										getGroupNumber(options.groups, node) ===
-											getGroupNumber(options.groups, nextNode) &&
+										getGroupNumber(IMPORT_GROUPS, node) ===
+											getGroupNumber(IMPORT_GROUPS, nextNode) &&
 										linesBetweenImports !== 0) ||
 									(options.newlinesBetween === 'never' && linesBetweenImports > 0)
 								) {
@@ -179,8 +176,8 @@ export default createRule({
 
 								if (
 									options.newlinesBetween === 'always' &&
-									getGroupNumber(options.groups, node) !==
-										getGroupNumber(options.groups, nextNode) &&
+									getGroupNumber(IMPORT_GROUPS, node) !==
+										getGroupNumber(IMPORT_GROUPS, nextNode) &&
 									linesBetweenImports > 1
 								) {
 									fixes.push(
@@ -202,8 +199,8 @@ export default createRule({
 
 								if (
 									options.newlinesBetween === 'always' &&
-									getGroupNumber(options.groups, node) !==
-										getGroupNumber(options.groups, nextNode) &&
+									getGroupNumber(IMPORT_GROUPS, node) !==
+										getGroupNumber(IMPORT_GROUPS, nextNode) &&
 									linesBetweenImports === 0
 								) {
 									fixes.push(
@@ -234,8 +231,8 @@ export default createRule({
 
 				for (let nodeList of splittedNodes) {
 					pairwise(nodeList, (left, right) => {
-						let leftNumber = getGroupNumber(options.groups, left)
-						let rightNumber = getGroupNumber(options.groups, right)
+						let leftNumber = getGroupNumber(IMPORT_GROUPS, left)
+						let rightNumber = getGroupNumber(IMPORT_GROUPS, right)
 
 						let numberOfEmptyLinesBetween = getLinesBetween(sourceCode, left, right)
 
@@ -305,25 +302,11 @@ export default createRule({
 })
 
 function computeGroup(
-	node:
-		| TSESTree.TSImportEqualsDeclaration
-		| TSESTree.VariableDeclaration
-		| TSESTree.ImportDeclaration,
+	node: ImportDeclarationNode,
 	settings: TSESLint.SharedConfigurationSettings,
 	sourceCode: TSESLint.SourceCode,
 ) {
-	let groups = [
-		'unassigned',
-		'builtin',
-		'framework',
-		'external',
-		'internal',
-		'local',
-		'style',
-		'object',
-		'unknown',
-	]
-	let { getGroup, defineGroup } = useGroups(groups)
+	let { getGroup, defineGroup } = useGroups(IMPORT_GROUPS)
 
 	if (
 		node.type === AST_NODE_TYPES.ImportDeclaration ||

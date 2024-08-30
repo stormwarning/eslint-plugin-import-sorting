@@ -1,4 +1,4 @@
-import type { SortingNode } from './types'
+import type { SortingNode } from './types.js'
 
 interface BaseCompareOptions {
 	/**

@@ -1,6 +1,6 @@
-import type { Group, SortingNode } from './types.js'
+import type { ImportGroups, SortingNode } from './types.js'
 
-export function getGroupNumber(groups: Group[], node: SortingNode): number {
+export function getGroupNumber(groups: ImportGroups, node: SortingNode): number {
 	for (let max = groups.length, index = 0; index < max; index++) {
 		let currentGroup = groups[index]
 

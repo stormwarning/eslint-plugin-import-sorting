@@ -1,5 +1,12 @@
 import type { TSESTree } from '@typescript-eslint/utils'
 
+import type { IMPORT_GROUPS } from '../rules/new-order.js'
+
+export type ImportDeclarationNode =
+	| TSESTree.TSImportEqualsDeclaration
+	| TSESTree.VariableDeclaration
+	| TSESTree.ImportDeclaration
+
 export interface SortingNode<Node extends TSESTree.Node = TSESTree.Node> {
 	name: string
 	node: Node
@@ -8,19 +15,10 @@ export interface SortingNode<Node extends TSESTree.Node = TSESTree.Node> {
 	hasMultipleImportDeclarations?: boolean
 }
 
-export type Group =
-	| 'unassigned'
-	| 'builtin'
-	| 'framework'
-	| 'external'
-	| 'internal'
-	| 'local'
-	| 'style'
-	| 'object'
-	| 'unknown'
+export type ImportGroup = (typeof IMPORT_GROUPS)[number]
+export type ImportGroups = typeof IMPORT_GROUPS
 
 export interface Options {
-	groups: Group[]
 	ignoreCase: boolean
 	newlinesBetween: 'ignore' | 'always' | 'never'
 	order: 'asc' | 'desc'
