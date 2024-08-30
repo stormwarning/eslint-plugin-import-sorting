@@ -1,7 +1,7 @@
 import type { TSESLint } from '@typescript-eslint/utils'
 import type { AST } from 'eslint'
 
-import type { ImportNode } from '../rules/order.js'
+import type { ImportNode } from '../../rules/order.js'
 
 function getTokensOrCommentsBefore(sourceCode: TSESLint.SourceCode, node: ImportNode, count = 100) {
 	let currentNodeOrToken = node

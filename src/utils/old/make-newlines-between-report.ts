@@ -1,7 +1,7 @@
 import type { TSESLint } from '@typescript-eslint/utils'
 import type { AST } from 'eslint'
 
-import type { ImportNodeObject } from '../rules/order.js'
+import type { ImportNodeObject } from '../../rules/order.js'
 import {
 	commentOnSameLineAs,
 	findEndOfLineWithComments,

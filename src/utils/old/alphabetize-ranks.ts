@@ -1,6 +1,6 @@
 import groupBy from 'object.groupby'
 
-import type { ImportNodeObject } from '../rules/order.js'
+import type { ImportNodeObject } from '../../rules/order.js'
 
 type OrderDirection = 'asc' | 'desc'
 

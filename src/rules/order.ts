@@ -1,10 +1,10 @@
 import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 import type { ImportDeclaration } from 'estree'
 
-import { mutateRanksToAlphabetize } from '../utils/alphabetize-ranks.js'
-import { makeNewlinesBetweenReport } from '../utils/make-newlines-between-report.js'
-import { makeOutOfOrderReport } from '../utils/make-out-of-order-report.js'
-import { resolveImportGroup } from '../utils/resolve-import-group.js'
+import { mutateRanksToAlphabetize } from '../utils/old/alphabetize-ranks.js'
+import { makeNewlinesBetweenReport } from '../utils/old/make-newlines-between-report.js'
+import { makeOutOfOrderReport } from '../utils/old/make-out-of-order-report.js'
+import { resolveImportGroup } from '../utils/old/resolve-import-group.js'
 
 const IMPORT_GROUPS = [
 	'builtin',

@@ -1,4 +1,4 @@
-import type { ImportNode } from '../rules/order.js'
+import type { ImportNode } from '../../rules/order.js'
 
 export function findRootNode(node: ImportNode) {
 	let parent = node

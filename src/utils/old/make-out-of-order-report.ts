@@ -1,6 +1,6 @@
 import { AST_NODE_TYPES, type TSESLint } from '@typescript-eslint/utils'
 
-import type { ImportNode, ImportNodeObject } from '../rules/order.js'
+import type { ImportNode, ImportNodeObject } from '../../rules/order.js'
 import { findEndOfLineWithComments, findStartOfLineWithComments } from './find-comment.js'
 import { findRootNode } from './find-root-node.js'
 

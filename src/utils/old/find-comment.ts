@@ -1,6 +1,6 @@
 import type { TSESLint } from '@typescript-eslint/utils'
 
-import type { ImportNode } from '../rules/order.js'
+import type { ImportNode } from '../../rules/order.js'
 import { takeTokensAfterWhile, takeTokensBeforeWhile } from './take-tokens.js'
 
 export function findStartOfLineWithComments(sourceCode: TSESLint.SourceCode, node: ImportNode) {
