@@ -32,21 +32,15 @@ export function compare(a: SortingNode, b: SortingNode, options: CompareOptions)
 	/** Don't sort unsassigned imports. */
 	if (a.group === 'unassigned' || b.group === 'unassigned') return 0
 
-	if (b.dependencies?.includes(a.name)) {
-		return -1
-	}
-
-	if (a.dependencies?.includes(b.name)) {
-		return 1
-	}
+	if (b.dependencies?.includes(a.name)) return -1
+	if (a.dependencies?.includes(b.name)) return 1
 
 	let orderCoefficient = options.order === 'asc' ? 1 : -1
 	let sortingFunction: (a: SortingNode, b: SortingNode) => number
 
-	let formatString =
-		options.type === 'line-length' || !options.ignoreCase
-			? (string: string) => string
-			: (string: string) => string.toLowerCase()
+	let formatString = options.ignoreCase
+		? (string: string) => string.toLowerCase()
+		: (string: string) => string
 
 	let nodeValueGetter = options.nodeValueGetter ?? ((node: SortingNode) => node.name)
 
@@ -109,7 +103,17 @@ function stripProtocol(name: string) {
 	return name.replace(/^(node|bun):/, '')
 }
 
+/**
+ * Compare the two strings using `localeCompare` natural sorting.
+ *
+ * If one of the string arguments starts with a dot, it is sorted to the
+ * bottom.  This ensures local imports come last within the `style` group.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare
+ */
 function compareString(first: string, second: string) {
+	if (first.startsWith('.') && !second.startsWith('.')) return 1
+	if (!first.startsWith('.') && second.startsWith('.')) return -1
 	return first.localeCompare(second, 'en', { numeric: true })
 }
 
