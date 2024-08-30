@@ -1,17 +1,51 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
+
+import dts from 'vite-plugin-dts'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	build: {
 		lib: {
 			entry: './src/index.ts',
-			formats: ['cjs'],
-			fileName: () => 'index.js',
+			formats: ['cjs', 'es'],
+			fileName: (format, name) =>
+				`${name}.${format === 'es' ? 'js' : 'cjs'}`,
 		},
 		minify: false,
 		rollupOptions: {
-			external: ['node:module', 'node:path'],
+			external: (id) => !id.startsWith('.') && !path.isAbsolute(id),
+			output: {
+				preserveModules: true,
+				exports: 'auto',
+			},
 		},
 	},
+
+	plugins: [
+		dts({
+			async afterBuild() {
+				await fs.writeFile(
+					'dist/index.d.ts',
+					(await fs.readFile('dist/index.d.ts'))
+						// eslint-disable-next-line unicorn/no-await-expression-member
+						.toString()
+						.replace(/\nexport .+/, '') + 'export = _default',
+				)
+			},
+			//
+			//   include: [
+			// 	path.join(__dirname, 'index.ts'),
+			// 	path.join(__dirname, 'typings'),
+			// 	path.join(__dirname, 'rules'),
+			// 	path.join(__dirname, 'utils'),
+			//   ],
+			insertTypesEntry: true,
+			strictOutput: true,
+			rollupTypes: true,
+		}),
+	],
+
 	test: {
 		globals: true,
 		environment: 'node',

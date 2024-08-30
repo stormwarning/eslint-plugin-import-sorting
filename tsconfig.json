@@ -7,6 +7,9 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
 
+    // Emit
+    "noEmit": true,
+
     // JavaScript Support
     "allowJs": true,
     "checkJs": true,
