@@ -1,5 +1,23 @@
 # eslint-plugin-import-sorting
 
+## 2.0.0
+
+### Major Changes
+
+- Remove deprecated settings ([#18](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/18))
+
+  - `import-sorting/known-framework` should be changed to `import-sorting/framework-patterns`
+  - `import-sorting/known-first-party` should be changed to `import-sorting/internal-patterns`
+
+### Minor Changes
+
+- Group unassigned imports at the top ([#18](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/18))
+  Unassigned imports are grouped together, but not sorted in case of potential side-effects.
+- Include Bun runtime modules in `builtin` group ([#18](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/18))
+  Since some builtin modules require a `bun:` or `node:` protocol prefix while others do not, sorting ignores the protocol prefix. (Including it consistently is recommended)
+- Include additional extensions in `style` group ([#18](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/18))
+  The `style` group now matches imports of Less, Sass, Stylus, and more.
+
 ## 1.2.2
 
 ### Patch Changes
