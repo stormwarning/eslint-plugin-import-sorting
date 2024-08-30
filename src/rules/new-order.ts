@@ -1,8 +1,7 @@
-import { builtinModules } from 'node:module'
-
-import { ESLintUtils, type TSESTree, type TSESLint, AST_NODE_TYPES } from '@typescript-eslint/utils'
+import { AST_NODE_TYPES, ESLintUtils, type TSESTree, type TSESLint } from '@typescript-eslint/utils'
 
 import { compare } from '../utils/compare.js'
+import { computeGroup, isSideEffectImport } from '../utils/compute-group.js'
 import { getCommentBefore } from '../utils/get-comment.js'
 import { getGroupNumber } from '../utils/get-group-number.js'
 import { getLinesBetween } from '../utils/get-lines-between.js'
@@ -10,7 +9,6 @@ import { getNodeRange } from '../utils/get-node-range.js'
 import { pairwise } from '../utils/pairwise.js'
 import { sortNodes } from '../utils/sort-nodes.js'
 import type { ImportDeclarationNode, Options, SortingNode } from '../utils/types.js'
-import { useGroups } from '../utils/use-groups.js'
 
 export const IMPORT_GROUPS = [
 	'unassigned',
@@ -107,116 +105,6 @@ export default createRule({
 						},
 					).length > 0
 
-				let fix = (
-					fixer: TSESLint.RuleFixer,
-					nodesToFix: SortingNode[],
-				): TSESLint.RuleFix[] => {
-					let fixes: TSESLint.RuleFix[] = []
-
-					let grouped: Record<string, SortingNode[]> = {}
-
-					for (let node of nodesToFix) {
-						let groupNumber = getGroupNumber(IMPORT_GROUPS, node)
-
-						grouped[groupNumber] =
-							groupNumber in grouped
-								? sortNodes([...grouped[groupNumber], node], options)
-								: [node]
-					}
-
-					let formatted = Object.keys(grouped)
-						.sort((a, b) => Number(a) - Number(b))
-						.reduce(
-							(accumulator: SortingNode[], group: string) => [
-								...accumulator,
-								...grouped[group],
-							],
-							[],
-						)
-
-					for (let max = formatted.length, index = 0; index < max; index++) {
-						let node = formatted.at(index)!
-
-						fixes.push(
-							fixer.replaceTextRange(
-								getNodeRange(nodesToFix.at(index)!.node, sourceCode),
-								sourceCode.text.slice(...getNodeRange(node.node, sourceCode)),
-							),
-						)
-
-						if (options.newlinesBetween !== 'ignore') {
-							let nextNode = formatted.at(index + 1)
-
-							if (nextNode) {
-								let linesBetweenImports = getLinesBetween(
-									sourceCode,
-									nodesToFix.at(index)!,
-									nodesToFix.at(index + 1)!,
-								)
-
-								if (
-									(options.newlinesBetween === 'always' &&
-										getGroupNumber(IMPORT_GROUPS, node) ===
-											getGroupNumber(IMPORT_GROUPS, nextNode) &&
-										linesBetweenImports !== 0) ||
-									(options.newlinesBetween === 'never' && linesBetweenImports > 0)
-								) {
-									fixes.push(
-										fixer.removeRange([
-											getNodeRange(nodesToFix.at(index)!.node, sourceCode).at(
-												1,
-											)!,
-											getNodeRange(
-												nodesToFix.at(index + 1)!.node,
-												sourceCode,
-											).at(0)! - 1,
-										]),
-									)
-								}
-
-								if (
-									options.newlinesBetween === 'always' &&
-									getGroupNumber(IMPORT_GROUPS, node) !==
-										getGroupNumber(IMPORT_GROUPS, nextNode) &&
-									linesBetweenImports > 1
-								) {
-									fixes.push(
-										fixer.replaceTextRange(
-											[
-												getNodeRange(
-													nodesToFix.at(index)!.node,
-													sourceCode,
-												).at(1)!,
-												getNodeRange(
-													nodesToFix.at(index + 1)!.node,
-													sourceCode,
-												).at(0)! - 1,
-											],
-											'\n',
-										),
-									)
-								}
-
-								if (
-									options.newlinesBetween === 'always' &&
-									getGroupNumber(IMPORT_GROUPS, node) !==
-										getGroupNumber(IMPORT_GROUPS, nextNode) &&
-									linesBetweenImports === 0
-								) {
-									fixes.push(
-										fixer.insertTextAfterRange(
-											getNodeRange(nodesToFix.at(index)!.node, sourceCode),
-											'\n',
-										),
-									)
-								}
-							}
-						}
-					}
-
-					return fixes
-				}
-
 				let splittedNodes: SortingNode[][] = [[]]
 
 				for (let node of nodes) {
@@ -252,7 +140,7 @@ export default createRule({
 									right: right.name,
 								},
 								node: right.node,
-								fix: (fixer) => fix(fixer, nodeList),
+								fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
 							})
 						}
 
@@ -264,7 +152,7 @@ export default createRule({
 									right: right.name,
 								},
 								node: right.node,
-								fix: (fixer) => fix(fixer, nodeList),
+								fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
 							})
 						}
 
@@ -277,7 +165,7 @@ export default createRule({
 										right: right.name,
 									},
 									node: right.node,
-									fix: (fixer) => fix(fixer, nodeList),
+									fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
 								})
 							} else if (
 								numberOfEmptyLinesBetween > 1 ||
@@ -290,7 +178,7 @@ export default createRule({
 										right: right.name,
 									},
 									node: right.node,
-									fix: (fixer) => fix(fixer, nodeList),
+									fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
 								})
 							}
 						}
@@ -301,132 +189,97 @@ export default createRule({
 	},
 })
 
-function computeGroup(
-	node: ImportDeclarationNode,
-	settings: TSESLint.SharedConfigurationSettings,
+function fix(
+	fixer: TSESLint.RuleFixer,
+	nodesToFix: SortingNode[],
 	sourceCode: TSESLint.SourceCode,
-) {
-	let { getGroup, defineGroup } = useGroups(IMPORT_GROUPS)
+	options: Options,
+): TSESLint.RuleFix[] {
+	let fixes: TSESLint.RuleFix[] = []
+	let grouped: Record<string, SortingNode[]> = {}
 
-	if (
-		node.type === AST_NODE_TYPES.ImportDeclaration ||
-		node.type === AST_NODE_TYPES.VariableDeclaration
-	) {
-		let value: string
-		let frameworkPatterns = validateSetting(settings, 'import-sorting/framework-patterns')
-		let internalPatterns = validateSetting(settings, 'import-sorting/internal-patterns')
+	for (let node of nodesToFix) {
+		let groupNumber = getGroupNumber(IMPORT_GROUPS, node)
 
-		if (node.type === AST_NODE_TYPES.ImportDeclaration) {
-			value = node.source.value
-		} else {
-			let decl = node.declarations[0].init as TSESTree.CallExpression
-			let declValue = (decl.arguments[0] as TSESTree.Literal).value
-			value = declValue!.toString()
-		}
-
-		if (isSideEffectImport(node, sourceCode)) defineGroup('unassigned')
-		if (isBuiltin(value)) defineGroup('builtin')
-		if (isStyle(value)) defineGroup('style')
-		if (isFramework(value, frameworkPatterns)) defineGroup('framework')
-		if (isInternal(value, internalPatterns)) defineGroup('internal')
-		if (isExternal(value)) defineGroup('external')
-		if (isLocal(value)) defineGroup('local')
+		grouped[groupNumber] =
+			groupNumber in grouped ? sortNodes([...grouped[groupNumber], node], options) : [node]
 	}
 
-	return getGroup()
-}
-
-function isBuiltin(name: string) {
-	let bunModules = [
-		'bun',
-		'bun:ffi',
-		'bun:jsc',
-		'bun:sqlite',
-		'bun:test',
-		'bun:wrap',
-		'detect-libc',
-		'undici',
-		'ws',
-	]
-	let builtinPrefixOnlyModules = ['sea', 'sqlite', 'test']
-
-	return (
-		builtinModules.includes(name.startsWith('node:') ? name.split('node:')[1] : name) ||
-		builtinPrefixOnlyModules.some((module) => `node:${module}` === name) ||
-		bunModules.includes(name)
-	)
-}
-
-function isSideEffectImport(node: TSESTree.Node, sourceCode: TSESLint.SourceCode) {
-	return (
-		node.type === AST_NODE_TYPES.ImportDeclaration &&
-		node.specifiers.length === 0 &&
-		/* Avoid matching on named imports without specifiers. */
-		!/}\s*from\s+/.test(sourceCode.getText(node))
-	)
-}
-
-function isStyle(name: string) {
-	return ['.less', '.scss', '.sass', '.styl', '.pcss', '.css', '.sss'].some((extension) =>
-		name.endsWith(extension),
-	)
-}
-
-function isFramework(name: string, pattern: string | string[]) {
-	if (Array.isArray(pattern)) {
-		return pattern.some((item) => new RegExp(item).test(name))
-	}
-
-	return new RegExp(pattern).test(name)
-}
-
-function isInternal(name: string, pattern: string | string[]) {
-	if (Array.isArray(pattern)) {
-		return pattern.some((item) => new RegExp(item).test(name))
-	}
-
-	return new RegExp(pattern).test(name)
-}
-
-const moduleRegExp = /^\w/
-function isModule(name: string) {
-	return moduleRegExp.test(name)
-}
-
-const scopedRegExp = /^@[^/]+\/?[^/]+/
-function isScoped(name: string) {
-	return scopedRegExp.test(name)
-}
-
-function isExternal(name: string) {
-	return isModule(name) || isScoped(name)
-}
-
-function isLocal(name: string) {
-	return name.startsWith('.')
-}
-
-function assertString(value: unknown, setting: string) {
-	if (typeof value !== 'string')
-		throw new Error(
-			// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-			`Invalid value for '${setting}': '${value}'.\nExpected 'string', got '${typeof value}' instead.`,
+	let formatted = Object.keys(grouped)
+		.sort((a, b) => Number(a) - Number(b))
+		.reduce(
+			(accumulator: SortingNode[], group: string) => [...accumulator, ...grouped[group]],
+			[],
 		)
-}
 
-function validateSetting(settings: TSESLint.SharedConfigurationSettings, setting: string) {
-	let value = settings[setting] as string | string[]
+	for (let max = formatted.length, index = 0; index < max; index++) {
+		let node = formatted.at(index)!
 
-	if (!value) return ''
-	if (Array.isArray(value)) {
-		for (let item of value) {
-			assertString(item, setting)
+		fixes.push(
+			fixer.replaceTextRange(
+				getNodeRange(nodesToFix.at(index)!.node, sourceCode),
+				sourceCode.text.slice(...getNodeRange(node.node, sourceCode)),
+			),
+		)
+
+		if (options.newlinesBetween !== 'ignore') {
+			let nextNode = formatted.at(index + 1)
+
+			if (nextNode) {
+				let linesBetweenImports = getLinesBetween(
+					sourceCode,
+					nodesToFix.at(index)!,
+					nodesToFix.at(index + 1)!,
+				)
+
+				if (
+					(options.newlinesBetween === 'always' &&
+						getGroupNumber(IMPORT_GROUPS, node) ===
+							getGroupNumber(IMPORT_GROUPS, nextNode) &&
+						linesBetweenImports !== 0) ||
+					(options.newlinesBetween === 'never' && linesBetweenImports > 0)
+				) {
+					fixes.push(
+						fixer.removeRange([
+							getNodeRange(nodesToFix.at(index)!.node, sourceCode).at(1)!,
+							getNodeRange(nodesToFix.at(index + 1)!.node, sourceCode).at(0)! - 1,
+						]),
+					)
+				}
+
+				if (
+					options.newlinesBetween === 'always' &&
+					getGroupNumber(IMPORT_GROUPS, node) !==
+						getGroupNumber(IMPORT_GROUPS, nextNode) &&
+					linesBetweenImports > 1
+				) {
+					fixes.push(
+						fixer.replaceTextRange(
+							[
+								getNodeRange(nodesToFix.at(index)!.node, sourceCode).at(1)!,
+								getNodeRange(nodesToFix.at(index + 1)!.node, sourceCode).at(0)! - 1,
+							],
+							'\n',
+						),
+					)
+				}
+
+				if (
+					options.newlinesBetween === 'always' &&
+					getGroupNumber(IMPORT_GROUPS, node) !==
+						getGroupNumber(IMPORT_GROUPS, nextNode) &&
+					linesBetweenImports === 0
+				) {
+					fixes.push(
+						fixer.insertTextAfterRange(
+							getNodeRange(nodesToFix.at(index)!.node, sourceCode),
+							'\n',
+						),
+					)
+				}
+			}
 		}
-
-		return value
 	}
 
-	assertString(value, setting)
-
-	return value
+	return fixes
 }
