@@ -1,5 +1,12 @@
 # eslint-plugin-import-sorting
 
+## 1.2.2
+
+### Patch Changes
+
+- Export ESM and types ([#21](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/21))
+  Plugin is exported as ESM and CJS, and includes type declarations as well.
+
 ## 1.2.1
 
 ### Patch Changes
