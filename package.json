@@ -14,13 +14,18 @@
   ],
   "repository": "stormwarning/eslint-plugin-import-sorting",
   "author": "Jeff (https://tidaltheory.io)",
-  "type": "commonjs",
+  "type": "module",
   "exports": {
     ".": {
-      "default": "./dist/index.js"
-    }
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
   },
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "docs",
@@ -29,7 +34,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.build.json",
+    "build": "vite build",
     "changeset": "changeset add",
     "prepare": "husky install",
     "release": "npm run build && changeset publish",
@@ -62,6 +67,7 @@
     ]
   },
   "dependencies": {
+    "@typescript-eslint/utils": "7.8.0",
     "object.groupby": "1.0.1"
   },
   "devDependencies": {
@@ -69,7 +75,6 @@
     "@types/eslint": "8.44.8",
     "@types/node": "20.10.4",
     "@typescript-eslint/rule-tester": "7.8.0",
-    "@typescript-eslint/utils": "7.8.0",
     "@zazen/changesets-changelog": "2.0.3",
     "@zazen/eslint-config": "6.6.0",
     "c8": "8.0.1",
@@ -82,6 +87,7 @@
     "prettier": "3.1.0",
     "prettier-plugin-packagejson": "2.4.6",
     "typescript": "5.2.2",
+    "vite-plugin-dts": "4.0.3",
     "vitest": "1.5.2"
   },
   "engines": {

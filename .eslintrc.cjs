@@ -52,6 +52,17 @@ const config = {
 				'import/no-extraneous-dependencies': 'off',
 			},
 		},
+		{
+			files: ['**/*.config.{js,cjs,mjs,ts}'],
+			rules: {
+				'import/no-extraneous-dependencies': [
+					'error',
+					{
+						devDependencies: true,
+					},
+				],
+			},
+		},
 	],
 }
 
