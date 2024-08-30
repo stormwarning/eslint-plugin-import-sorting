@@ -33,13 +33,6 @@ export default defineConfig({
 						.replace(/\nexport .+/, '') + 'export = _default',
 				)
 			},
-			//
-			//   include: [
-			// 	path.join(__dirname, 'index.ts'),
-			// 	path.join(__dirname, 'typings'),
-			// 	path.join(__dirname, 'rules'),
-			// 	path.join(__dirname, 'utils'),
-			//   ],
 			insertTypesEntry: true,
 			strictOutput: true,
 			rollupTypes: true,
@@ -47,7 +40,6 @@ export default defineConfig({
 	],
 
 	test: {
-		globals: true,
 		environment: 'node',
 		include: 'tests/**/*.test.ts',
 	},
