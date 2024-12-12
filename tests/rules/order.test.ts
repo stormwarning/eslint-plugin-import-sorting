@@ -155,6 +155,24 @@ describe('order', () => {
 				},
 
 				{
+					name: 'groups local modules together',
+					code: dedent`
+						import prettier from 'eslint-config-prettier'
+						import xoTypeScript from 'eslint-config-xo-typescript'
+						import etc from 'eslint-plugin-etc'
+						import stylistic from './stylistic.js'
+					`,
+					output: dedent`
+						import prettier from 'eslint-config-prettier'
+						import xoTypeScript from 'eslint-config-xo-typescript'
+						import etc from 'eslint-plugin-etc'
+
+						import stylistic from './stylistic.js'
+					`,
+					errors: [{ messageId: 'needs-newline' }],
+				},
+
+				{
 					name: 'sorts local paths by dot segments',
 					code: dedent`
 						import tenThings from '../get-things/get10Things.js'
