@@ -139,8 +139,6 @@ export default createRule<unknown[], MessageId>({
 									nodes,
 									sortedNodes: sortedNodesExcludingEslintDisabled,
 									sourceCode,
-									//
-									// options,
 								}),
 							data: {
 								right: right.name,

@@ -10,9 +10,6 @@ interface MakeFixesParameters {
 	sortedNodes: SortingNode[]
 	sourceCode: TSESLint.SourceCode
 	ignoreFirstNodeHighestBlockComment?: boolean
-	options?: {
-		partitionByComment?: string[] | boolean | string
-	}
 }
 
 export function makeFixes({
@@ -21,7 +18,6 @@ export function makeFixes({
 	sortedNodes,
 	sourceCode,
 	ignoreFirstNodeHighestBlockComment,
-	options,
 }: MakeFixesParameters): TSESLint.RuleFix[] {
 	let fixes: TSESLint.RuleFix[] = []
 

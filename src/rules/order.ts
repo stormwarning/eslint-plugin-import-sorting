@@ -1,20 +1,15 @@
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree, type TSESLint } from '@typescript-eslint/utils'
+import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from '@typescript-eslint/utils'
 
-import { compare } from '../utils/compare.js'
-import { computeGroup, isSideEffectImport } from '../utils/compute-group.js'
-import { getCommentsBefore } from '../utils/get-comment.js'
+import { computeGroup } from '../utils/compute-group.js'
 import { getEslintDisabledLines } from '../utils/get-eslint-disabled-lines.js'
 import { getGroupNumber } from '../utils/get-group-number.js'
-import { getLinesBetween } from '../utils/get-lines-between.js'
 import { getNewlineErrors } from '../utils/get-newline-errors.js'
-import { getNodeRange } from '../utils/get-node-range.js'
 import { isNodeEslintDisabled } from '../utils/is-node-eslint-disabled.js'
 import { makeFixes } from '../utils/make-fixes.js'
 import { makeNewlineFixes } from '../utils/make-newline-fixes.js'
 import { pairwise } from '../utils/pairwise.js'
 import { rangeToDiff } from '../utils/range-to-diff.js'
 import { sortNodesByGroups } from '../utils/sort-nodes-by-groups.js'
-import { sortNodes } from '../utils/sort-nodes.js'
 import type { ImportDeclarationNode, Options, SortingNode } from '../utils/types.js'
 
 export const IMPORT_GROUPS = [
@@ -116,15 +111,6 @@ export default createRule<unknown[], MessageId>({
 						}).length > 0
 					)
 				}
-				//
-				// let hasContentBetweenNodes = (left: SortingNode, right: SortingNode): boolean =>
-				// 	sourceCode.getTokensBetween(
-				// 		left.node,
-				// 		getCommentBefore(right.node, sourceCode) ?? right.node,
-				// 		{
-				// 			includeComments: true,
-				// 		},
-				// 	).length > 0
 
 				let formattedNodes: SortingNode[][] = [[]]
 
@@ -181,8 +167,6 @@ export default createRule<unknown[], MessageId>({
 										nodes: nodeList,
 										sortedNodes,
 										sourceCode,
-										//
-										// options,
 									}),
 									...makeNewlineFixes({
 										fixer,
@@ -202,166 +186,9 @@ export default createRule<unknown[], MessageId>({
 								messageId: message,
 							})
 						}
-
-						//
-						// let numberOfEmptyLinesBetween = getLinesBetween(sourceCode, left, right)
-						//
-						// if (
-						// 	!(
-						// 		isSideEffectImport(left.node, sourceCode) &&
-						// 		isSideEffectImport(right.node, sourceCode)
-						// 	) &&
-						// 	!hasContentBetweenNodes(left, right) &&
-						// 	(leftNumber > rightNumber ||
-						// 		(leftNumber === rightNumber && compare(left, right, options) > 0))
-						// ) {
-						// 	context.report({
-						// 		messageId: 'out-of-order',
-						// 		data: {
-						// 			left: left.name,
-						// 			right: right.name,
-						// 		},
-						// 		node: right.node,
-						// 		fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
-						// 	})
-						// }
-						//
-						// if (options.newlinesBetween === 'never' && numberOfEmptyLinesBetween > 0) {
-						// 	context.report({
-						// 		messageId: 'extra-newline',
-						// 		data: {
-						// 			left: left.name,
-						// 			right: right.name,
-						// 		},
-						// 		node: right.node,
-						// 		fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
-						// 	})
-						// }
-						//
-						// if (options.newlinesBetween === 'always') {
-						// 	if (leftNumber < rightNumber && numberOfEmptyLinesBetween === 0) {
-						// 		context.report({
-						// 			messageId: 'needs-newline',
-						// 			data: {
-						// 				left: left.name,
-						// 				right: right.name,
-						// 			},
-						// 			node: right.node,
-						// 			fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
-						// 		})
-						// 	} else if (
-						// 		numberOfEmptyLinesBetween > 1 ||
-						// 		(leftNumber === rightNumber && numberOfEmptyLinesBetween > 0)
-						// 	) {
-						// 		context.report({
-						// 			messageId: 'extra-newline',
-						// 			data: {
-						// 				left: left.name,
-						// 				right: right.name,
-						// 			},
-						// 			node: right.node,
-						// 			fix: (fixer) => fix(fixer, nodeList, sourceCode, options),
-						// 		})
-						// 	}
-						// }
 					})
 				}
 			},
 		}
 	},
 })
-
-function fix(
-	fixer: TSESLint.RuleFixer,
-	nodesToFix: SortingNode[],
-	sourceCode: TSESLint.SourceCode,
-	options: Options,
-): TSESLint.RuleFix[] {
-	let fixes: TSESLint.RuleFix[] = []
-	let grouped: Record<string, SortingNode[]> = {}
-
-	for (let node of nodesToFix) {
-		let groupNumber = getGroupNumber(IMPORT_GROUPS, node)
-
-		grouped[groupNumber] =
-			groupNumber in grouped ? sortNodes([...grouped[groupNumber], node], options) : [node]
-	}
-
-	let formatted = Object.keys(grouped)
-		.sort((a, b) => Number(a) - Number(b))
-		.reduce(
-			(accumulator: SortingNode[], group: string) => [...accumulator, ...grouped[group]],
-			[],
-		)
-
-	for (let max = formatted.length, index = 0; index < max; index++) {
-		let node = formatted.at(index)!
-
-		fixes.push(
-			fixer.replaceTextRange(
-				getNodeRange(nodesToFix.at(index)!.node, sourceCode),
-				sourceCode.text.slice(...getNodeRange(node.node, sourceCode)),
-			),
-		)
-
-		if (options.newlinesBetween !== 'ignore') {
-			let nextNode = formatted.at(index + 1)
-
-			if (nextNode) {
-				let linesBetweenImports = getLinesBetween(
-					sourceCode,
-					nodesToFix.at(index)!,
-					nodesToFix.at(index + 1)!,
-				)
-
-				if (
-					(options.newlinesBetween === 'always' &&
-						getGroupNumber(IMPORT_GROUPS, node) ===
-							getGroupNumber(IMPORT_GROUPS, nextNode) &&
-						linesBetweenImports !== 0) ||
-					(options.newlinesBetween === 'never' && linesBetweenImports > 0)
-				) {
-					fixes.push(
-						fixer.removeRange([
-							getNodeRange(nodesToFix.at(index)!.node, sourceCode).at(1)!,
-							getNodeRange(nodesToFix.at(index + 1)!.node, sourceCode).at(0)! - 1,
-						]),
-					)
-				}
-
-				if (
-					options.newlinesBetween === 'always' &&
-					getGroupNumber(IMPORT_GROUPS, node) !==
-						getGroupNumber(IMPORT_GROUPS, nextNode) &&
-					linesBetweenImports > 1
-				) {
-					fixes.push(
-						fixer.replaceTextRange(
-							[
-								getNodeRange(nodesToFix.at(index)!.node, sourceCode).at(1)!,
-								getNodeRange(nodesToFix.at(index + 1)!.node, sourceCode).at(0)! - 1,
-							],
-							'\n',
-						),
-					)
-				}
-
-				if (
-					options.newlinesBetween === 'always' &&
-					getGroupNumber(IMPORT_GROUPS, node) !==
-						getGroupNumber(IMPORT_GROUPS, nextNode) &&
-					linesBetweenImports === 0
-				) {
-					fixes.push(
-						fixer.insertTextAfterRange(
-							getNodeRange(nodesToFix.at(index)!.node, sourceCode),
-							'\n',
-						),
-					)
-				}
-			}
-		}
-	}
-
-	return fixes
-}
