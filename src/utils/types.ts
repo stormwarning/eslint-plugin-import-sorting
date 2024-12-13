@@ -10,9 +10,15 @@ export type ImportDeclarationNode =
 export interface SortingNode<Node extends TSESTree.Node = TSESTree.Node> {
 	name: string
 	node: Node
+	size: number
 	dependencies?: string[]
 	group?: string
+	isEslintDisabled: boolean
 	hasMultipleImportDeclarations?: boolean
+}
+
+export interface MemberSortingNode extends SortingNode<TSESTree.ImportClause> {
+	groupKind: 'value' | 'type'
 }
 
 export type ImportGroup = (typeof IMPORT_GROUPS)[number]

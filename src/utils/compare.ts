@@ -1,32 +1,32 @@
 import type { SortingNode } from './types.js'
 
-interface BaseCompareOptions {
+interface BaseCompareOptions<T extends SortingNode> {
 	/**
 	 * Custom function to get the value of the node.  By default, returns the
 	 * node's name.
 	 */
-	nodeValueGetter?: (node: SortingNode) => string
+	nodeValueGetter?: (node: T) => string
 	order: 'desc' | 'asc'
 }
 
-interface NaturalCompareOptions extends BaseCompareOptions {
+interface NaturalCompareOptions<T extends SortingNode> extends BaseCompareOptions<T> {
 	ignoreCase?: boolean
 	type: 'natural'
 }
 
-export type CompareOptions = NaturalCompareOptions
+export type CompareOptions<T extends SortingNode> = NaturalCompareOptions<T>
 
-export function compare(a: SortingNode, b: SortingNode, options: CompareOptions): number {
-	/** Don't sort unsassigned imports. */
+export function compare<T extends SortingNode>(a: T, b: T, options: CompareOptions<T>): number {
+	/** Don't sort unassigned imports. */
 	if (a.group === 'unassigned' || b.group === 'unassigned') return 0
 
 	if (b.dependencies?.includes(a.name)) return -1
 	if (a.dependencies?.includes(b.name)) return 1
 
 	let orderCoefficient = options.order === 'asc' ? 1 : -1
-	let sortingFunction: (a: SortingNode, b: SortingNode) => number
+	let sortingFunction: (a: T, b: T) => number
 
-	let nodeValueGetter = options.nodeValueGetter ?? ((node: SortingNode) => node.name)
+	let nodeValueGetter = options.nodeValueGetter ?? ((node: T) => node.name)
 
 	sortingFunction = (aNode, bNode) => {
 		let aImport = stripProtocol(nodeValueGetter(aNode))

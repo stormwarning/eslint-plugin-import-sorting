@@ -51,10 +51,7 @@ describe('order', () => {
 					errors: [
 						{
 							messageId: 'out-of-order',
-							data: {
-								left: 'b',
-								right: 'a',
-							},
+							data: { left: 'b', right: 'a' },
 						},
 					],
 				},
@@ -280,7 +277,13 @@ describe('order', () => {
 						import { a } from 'a'
 						import { c } from 'c'
 					`,
-					errors: [{ messageId: 'out-of-order' }, { messageId: 'out-of-order' }],
+					errors: [
+						{
+							data: { left: 'd', right: 'b' },
+							messageId: 'out-of-order',
+						},
+						{ messageId: 'out-of-order' },
+					],
 				},
 			],
 		})
@@ -341,6 +344,22 @@ describe('order', () => {
 					errors: [{ messageId: 'needs-newline' }, { messageId: 'out-of-order' }],
 				},
 			],
+		})
+
+		ruleTester.run('ignores dynamic requires', orderRule, {
+			valid: [
+				{
+					name: 'without errors',
+					code: dedent`
+						const path = require('path')
+
+						const myFilename = require('the-filename')
+						const file = require(path.join(myDir, myFilename))
+						const other = require('./other.js')
+					`,
+				},
+			],
+			invalid: [],
 		})
 	})
 })
