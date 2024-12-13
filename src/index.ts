@@ -1,9 +1,11 @@
 import order from './rules/order.js'
+import specifierOrder from './rules/specifier-order.js'
 
 const plugin = {
-	name: 'sorting-order',
+	name: 'import-sorting',
 	rules: {
 		order,
+		'specifier-order': specifierOrder,
 	},
 }
 

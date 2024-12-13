@@ -1,11 +1,13 @@
-import { ASTUtils, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
+import { ASTUtils, type TSESLint, type TSESTree, AST_TOKEN_TYPES } from '@typescript-eslint/utils'
 
-import { getCommentBefore } from './get-comment.js'
+import { getCommentsBefore } from './get-comment.js'
+import { getEslintDisabledRules } from './get-eslint-disabled-rules.js'
 
 export function getNodeRange(
 	node: TSESTree.Node,
 	sourceCode: TSESLint.SourceCode,
 	additionalOptions?: {
+		ignoreHighestBlockComment?: boolean
 		partitionComment?: string[] | boolean | string
 	},
 ): TSESTree.Range {
@@ -23,21 +25,43 @@ export function getNodeRange(
 		end = bodyClosingParen.range.at(1)!
 	}
 
-	let comment = getCommentBefore(node, sourceCode)
+	let comments = getCommentsBefore(node, sourceCode)
+	let highestBlockComment = comments.find((comment) => comment.type === AST_TOKEN_TYPES.Block)
+	let relevantTopComment: TSESTree.Comment | undefined
 
-	if (raw.endsWith(';') || raw.endsWith(',')) {
-		let tokensAfter = sourceCode.getTokensAfter(node, {
-			includeComments: true,
-			count: 2,
-		})
+	/**
+	 * Iterate on all comments starting from the bottom until we reach the last
+	 * of the comments, a newline between comments, a partition comment,
+	 * or an eslint-disable comment.
+	 */
+	for (let index = comments.length - 1; index >= 0; index--) {
+		let comment = comments[index]
 
-		if (node.loc.start.line === tokensAfter.at(1)?.loc.start.line) {
-			end -= 1
+		let eslintDisabledRules = getEslintDisabledRules(comment.value)
+		if (
+			eslintDisabledRules?.eslintDisableDirective === 'eslint-disable' ||
+			eslintDisabledRules?.eslintDisableDirective === 'eslint-enable'
+		) {
+			break
 		}
+
+		// Check for newlines between comments or between the first comment and
+		// the node.
+		let previousCommentOrNodeStartLine =
+			index === comments.length - 1 ? node.loc.start.line : comments[index + 1].loc.start.line
+		if (comment.loc.end.line !== previousCommentOrNodeStartLine - 1) {
+			break
+		}
+
+		if (additionalOptions?.ignoreHighestBlockComment && comment === highestBlockComment) {
+			break
+		}
+
+		relevantTopComment = comment
 	}
 
-	if (comment) {
-		start = comment.range.at(0)!
+	if (relevantTopComment) {
+		start = relevantTopComment.range.at(0)!
 	}
 
 	return [start, end]

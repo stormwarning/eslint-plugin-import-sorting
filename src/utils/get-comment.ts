@@ -1,35 +1,49 @@
 import { AST_TOKEN_TYPES, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 
-export function getCommentBefore(
+/**
+ * Returns a list of comments before a given node, excluding ones that are
+ * right after code.  Includes comment blocks.
+ */
+export function getCommentsBefore(
 	node: TSESTree.Node,
 	source: TSESLint.SourceCode,
-): TSESTree.Comment | undefined {
-	let [tokenBefore, tokenOrCommentBefore] = source.getTokensBefore(node, {
-		filter: ({ value, type }) =>
-			!(type === AST_TOKEN_TYPES.Punctuator && [',', ';'].includes(value)),
-		includeComments: true,
-		count: 2,
-	}) as Array<TSESTree.Token | undefined>
+	tokenValueToIgnoreBefore?: string,
+): TSESTree.Comment[] {
+	let commentsBefore = getCommentsBeforeNodeOrToken(node, source)
+	let tokenBeforeNode = source.getTokenBefore(node)
 
 	if (
-		(tokenOrCommentBefore?.type === AST_TOKEN_TYPES.Block ||
-			tokenOrCommentBefore?.type === AST_TOKEN_TYPES.Line) &&
-		node.loc.start.line - tokenOrCommentBefore.loc.end.line <= 1 &&
-		tokenBefore?.loc.end.line !== tokenOrCommentBefore.loc.start.line
+		commentsBefore.length > 0 ||
+		!tokenValueToIgnoreBefore ||
+		tokenBeforeNode?.value !== tokenValueToIgnoreBefore
 	) {
-		return tokenOrCommentBefore
+		return commentsBefore
 	}
 
-	return undefined
+	return getCommentsBeforeNodeOrToken(tokenBeforeNode, source)
+}
+
+function getCommentsBeforeNodeOrToken(
+	node: TSESTree.Node | TSESTree.Token,
+	source: TSESLint.SourceCode,
+): TSESTree.Comment[] {
+	/**
+	 * `getCommentsBefore` also returns comments that are right after code,
+	 * filter those out.
+	 */
+	return source.getCommentsBefore(node).filter((comment) => {
+		let tokenBeforeComment = source.getTokenBefore(comment)
+		return tokenBeforeComment?.loc.end.line !== comment.loc.end.line
+	})
 }
 
 export function getCommentAfter(
-	node: TSESTree.Node,
+	node: TSESTree.Node | TSESTree.Token,
 	source: TSESLint.SourceCode,
 ): TSESTree.Comment | undefined {
 	let token = source.getTokenAfter(node, {
 		filter: ({ value, type }) =>
-			!(type === AST_TOKEN_TYPES.Punctuator && [',', ';'].includes(value)),
+			!(type === AST_TOKEN_TYPES.Punctuator && [',', ';', ':'].includes(value)),
 		includeComments: true,
 	})
 
