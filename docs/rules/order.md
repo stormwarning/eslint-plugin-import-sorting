@@ -1,8 +1,8 @@
-# import-sorting/order
+# Consistently order `import` statements (`import-sorting/order`)
 
 🔧 This rule is automatically fixable by the [`--fix` CLI option](https://eslint.org/docs/latest/user-guide/command-line-interface#--fix).
 
-Enforce a convention in the order of `import` statements.
+<!-- end auto-generated rule header -->
 
 The grouping order is as follows:
 
@@ -24,13 +24,17 @@ constitutes an “internal” module.
 For example:
 
 ```js
-settings: {
-	// Group official React packages together.
-	'import-sorting/framework-patterns': /^react(\/|-dom|-router|$)/.source,
-	// Group aliased imports together.
-	'import-sorting/internal-patterns': /^~/.source,
-},
-rules: {
-	'import-sorting/order': 'error',
-},
+export default [
+	{
+		settings: {
+			// Group official React packages together.
+			'import-sorting/framework-patterns': /^react(\/|-dom|-router|$)/.source,
+			// Group aliased imports together.
+			'import-sorting/internal-patterns': /^~/.source,
+		},
+		rules: {
+			'import-sorting/order': 'error',
+		},
+	},
+]
 ```

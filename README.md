@@ -1,6 +1,7 @@
-## eslint-plugin-import-sorting
+# eslint-plugin-import-sorting
 
-Enforce a convention in the order of `import` statements, inspired by [isort](https://timothycrosley.github.io/isort/#how-does-isort-work)’s grouping style:
+Enforce a convention in the order of `import` statements, inspired by 
+[isort](https://timothycrosley.github.io/isort/#how-does-isort-work)’s grouping style:
 
 1. Node standard modules
 2. Framework modules
@@ -8,17 +9,21 @@ Enforce a convention in the order of `import` statements, inspired by [isort](ht
 4. Internal modules
 5. Explicitly local modules
 
-This plugin includes an additional group for “style” imports where the import source ends in `.css` or other style format. Imports are sorted alphabetically, except for local modules, which are sorted by the number of `.` segements in the path first, then alphabetically.
+This plugin includes an additional group for “style” imports where the import
+source ends in `.css` or other style format. Imports are sorted alphabetically,
+except for local modules, which are sorted by the number of `.` segements in
+the path first, then alphabetically.
 
 ## Usage
 
-Install the plugin, and ESLint if is not already.
+Install the plugin, and ESLint if it is not already.
 
 ```sh
 npm install --save-dev eslint eslint-plugin-import-sorting
 ```
 
-Include the plugin in the `plugins` key of your ESLint config and enable the rule.
+Include the plugin in the `plugins` key of your ESLint config and enable the
+rules.
 
 ```js
 // eslint.config.js
@@ -31,26 +36,19 @@ export default [
 			'import-sorting': importSortingPlugin,
 		},
 		rules: {
-			'import-sorting/order': 'warn',
+			'import-sorting/order': 'error',
 		},
 	},
 ]
 ```
 
-<details>
-	<summary>Legacy config example</summary>
+<!-- begin auto-generated rules list -->
 
-```js
-// .eslintrc.js
+🔧 Automatically fixable by the [`--fix` CLI option](https://eslint.org/docs/user-guide/command-line-interface#--fix).
 
-module.exports = {
-	plugins: ['import-sorting'],
-	rules: {
-		'import-sorting/order': 'warn',
-	},
-}
-```
+| Name                                             | Description                                 | 🔧 |
+| :----------------------------------------------- | :------------------------------------------ | :- |
+| [order](docs/rules/order.md)                     | Consistently order `import` statements.     | 🔧 |
+| [specifier-order](docs/rules/specifier-order.md) | Consistently order named import specifiers. | 🔧 |
 
-</details>
-
-See the [order](https://github.com/stormwarning/eslint-plugin-import-sorting/blob/main/docs/rules/order.md) rule docs for more configuration options.
+<!-- end auto-generated rules list -->

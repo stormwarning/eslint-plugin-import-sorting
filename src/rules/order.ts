@@ -38,7 +38,7 @@ export default createRule<unknown[], MessageId>({
 		type: 'suggestion',
 		fixable: 'code',
 		docs: {
-			description: 'Enforce a convention in the order of `import` statements.',
+			description: 'Consistently order `import` statements.',
 		},
 		messages: {
 			'needs-newline':
