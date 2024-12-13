@@ -1,5 +1,11 @@
 # eslint-plugin-import-sorting
 
+## 2.1.0
+
+### Minor Changes
+
+- Add new `specifier-order` rule for sorting named imports ([#25](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/25))
+
 ## 2.0.0
 
 ### Major Changes
