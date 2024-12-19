@@ -32,8 +32,8 @@ export function computeGroup(
 		if (isSideEffectImport(node, sourceCode)) defineGroup('unassigned')
 		if (isBuiltin(value)) defineGroup('builtin')
 		if (isStyle(value)) defineGroup('style')
-		if (isFramework(value, frameworkPatterns)) defineGroup('framework')
-		if (isInternal(value, internalPatterns)) defineGroup('internal')
+		if (frameworkPatterns && isFramework(value, frameworkPatterns)) defineGroup('framework')
+		if (internalPatterns && isInternal(value, internalPatterns)) defineGroup('internal')
 		if (isExternal(value)) defineGroup('external')
 		if (isLocal(value)) defineGroup('local')
 	}
@@ -122,7 +122,7 @@ function assertString(value: unknown, setting: string) {
 function validateSetting(settings: TSESLint.SharedConfigurationSettings, setting: string) {
 	let value = settings[setting] as string | string[]
 
-	if (!value) return ''
+	if (!value) return undefined
 	if (Array.isArray(value)) {
 		for (let item of value) {
 			assertString(item, setting)

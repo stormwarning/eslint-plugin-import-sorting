@@ -154,19 +154,32 @@ describe('order', () => {
 				{
 					name: 'groups local modules together',
 					code: dedent`
+						import { AST_NODE_TYPES, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 						import prettier from 'eslint-config-prettier'
 						import xoTypeScript from 'eslint-config-xo-typescript'
 						import etc from 'eslint-plugin-etc'
 						import stylistic from './stylistic.js'
+						import { other } from '../other.js'
 					`,
 					output: dedent`
+						import { AST_NODE_TYPES, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 						import prettier from 'eslint-config-prettier'
 						import xoTypeScript from 'eslint-config-xo-typescript'
 						import etc from 'eslint-plugin-etc'
 
+						import { other } from '../other.js'
 						import stylistic from './stylistic.js'
 					`,
-					errors: [{ messageId: 'needs-newline' }],
+					errors: [
+						{
+							messageId: 'needs-newline',
+							data: { left: 'eslint-plugin-etc', right: './stylistic.js' },
+						},
+						{
+							messageId: 'out-of-order',
+							data: { left: './stylistic.js', right: '../other.js' },
+						},
+					],
 				},
 
 				{
