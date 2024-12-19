@@ -1,5 +1,11 @@
 # eslint-plugin-import-sorting
 
+## 2.1.1
+
+### Patch Changes
+
+- Fix bug with grouping when settings are not explicitly defined ([#27](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/27))
+
 ## 2.1.0
 
 ### Minor Changes
