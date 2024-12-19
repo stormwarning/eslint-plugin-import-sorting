@@ -1,4 +1,4 @@
-import { ASTUtils, type TSESLint, type TSESTree, AST_TOKEN_TYPES } from '@typescript-eslint/utils'
+import { AST_TOKEN_TYPES, ASTUtils, type TSESLint, type TSESTree } from '@typescript-eslint/utils'
 
 import { getCommentsBefore } from './get-comment.js'
 import { getEslintDisabledRules } from './get-eslint-disabled-rules.js'

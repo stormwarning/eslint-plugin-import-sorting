@@ -40,11 +40,7 @@ export function makeNewlineFixes({
 		let rangeToReplace: [number, number] = [currentNodeRange.at(1)!, nextNodeRangeStart]
 		let textBetweenNodes = sourceCode.text.slice(currentNodeRange.at(1), nextNodeRangeStart)
 
-		let linesBetweenMembers = getLinesBetween(
-			sourceCode,
-			nodes.at(index)!,
-			nodes.at(index + 1)!,
-		)
+		let linesBetweenMembers = getLinesBetween(sourceCode, nodes.at(index)!, nodes.at(index + 1)!)
 
 		let rangeReplacement: undefined | string
 		if (

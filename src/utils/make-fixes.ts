@@ -35,8 +35,7 @@ export function makeFixes({
 
 		let sortedNodeCode = sourceCode.text.slice(
 			...getNodeRange(sortedNode, sourceCode, {
-				ignoreHighestBlockComment:
-					ignoreFirstNodeHighestBlockComment && isSortedNodeFirstNode,
+				ignoreHighestBlockComment: ignoreFirstNodeHighestBlockComment && isSortedNodeFirstNode,
 			}),
 		)
 		let sortedNodeText = sourceCode.getText(sortedNode)
@@ -46,13 +45,13 @@ export function makeFixes({
 		})
 		let nextToken = tokensAfter.at(0)
 
-		let sortedNextNodeEndsWithSafeCharacter =
+		let willSortedNextNodeEndWithSafeCharacter =
 			sortedNodeText.endsWith(';') || sortedNodeText.endsWith(',')
 		let isNextTokenOnSameLineAsNode = nextToken?.loc.start.line === node.loc.end.line
 		let isNextTokenSafeCharacter = nextToken?.value === ';' || nextToken?.value === ','
 		if (
 			isNextTokenOnSameLineAsNode &&
-			!sortedNextNodeEndsWithSafeCharacter &&
+			!willSortedNextNodeEndWithSafeCharacter &&
 			!isNextTokenSafeCharacter
 		) {
 			sortedNodeCode += ';'
@@ -61,8 +60,7 @@ export function makeFixes({
 		fixes.push(
 			fixer.replaceTextRange(
 				getNodeRange(node, sourceCode, {
-					ignoreHighestBlockComment:
-						ignoreFirstNodeHighestBlockComment && isNodeFirstNode,
+					ignoreHighestBlockComment: ignoreFirstNodeHighestBlockComment && isNodeFirstNode,
 				}),
 				sortedNodeCode,
 			),

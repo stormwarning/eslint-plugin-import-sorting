@@ -41,8 +41,7 @@ export default createRule<unknown[], MessageId>({
 			description: 'Consistently order `import` statements.',
 		},
 		messages: {
-			'needs-newline':
-				'There should be at least one empty line between {{left}} and {{right}}',
+			'needs-newline': 'There should be at least one empty line between {{left}} and {{right}}',
 			'extra-newline': 'There should be no empty line between {{left}} and {{right}}',
 			'out-of-order': '{{right}} should occur before {{left}}',
 		},
@@ -140,9 +139,7 @@ export default createRule<unknown[], MessageId>({
 						let messages: MessageId[] = []
 
 						if (indexOfLeft > indexOfRight) {
-							messages.push(
-								leftNumber === rightNumber ? 'out-of-order' : 'out-of-order',
-							)
+							messages.push(leftNumber === rightNumber ? 'out-of-order' : 'out-of-order')
 						}
 
 						messages = [

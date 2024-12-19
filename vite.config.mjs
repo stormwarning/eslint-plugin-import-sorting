@@ -9,8 +9,7 @@ export default defineConfig({
 		lib: {
 			entry: './src/index.ts',
 			formats: ['cjs', 'es'],
-			fileName: (format, name) =>
-				`${name}.${format === 'es' ? 'js' : 'cjs'}`,
+			fileName: (format, name) => `${name}.${format === 'es' ? 'js' : 'cjs'}`,
 		},
 		minify: false,
 		rollupOptions: {
@@ -41,6 +40,6 @@ export default defineConfig({
 
 	test: {
 		environment: 'node',
-		include: 'tests/**/*.test.ts',
+		include: ['tests/**/*.test.ts'],
 	},
 })

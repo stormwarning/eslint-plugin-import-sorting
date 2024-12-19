@@ -36,10 +36,7 @@ const config = {
 		/** Disabled for now pending refactor. */
 		'unicorn/no-array-reduce': 'off',
 
-		'unicorn/no-unnecessary-polyfills': [
-			'error',
-			{ targets: 'node current' },
-		],
+		'unicorn/no-unnecessary-polyfills': ['error', { targets: 'node current' }],
 
 		'etc/no-assign-mutated-array': 'off',
 		'etc/prefer-less-than': 'off',

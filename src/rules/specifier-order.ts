@@ -79,8 +79,7 @@ export default createRule<unknown[], MessageId>({
 
 					let sortingNode: MemberSortingNode = {
 						groupKind:
-							specifier.type === AST_NODE_TYPES.ImportSpecifier &&
-							specifier.importKind === 'type'
+							specifier.type === AST_NODE_TYPES.ImportSpecifier && specifier.importKind === 'type'
 								? 'type'
 								: 'value',
 						isEslintDisabled: isNodeEslintDisabled(specifier, eslintDisabledLines),
@@ -102,12 +101,10 @@ export default createRule<unknown[], MessageId>({
 				}
 
 				for (let nodes of formattedMembers) {
-					let filteredGroupKindNodes = groupKindOrder.map(
-						(groupKind: 'value' | 'type' | 'any') =>
-							nodes.filter(
-								(currentNode) =>
-									groupKind === 'any' || currentNode.groupKind === groupKind,
-							),
+					let filteredGroupKindNodes = groupKindOrder.map((groupKind: 'value' | 'type' | 'any') =>
+						nodes.filter(
+							(currentNode) => groupKind === 'any' || currentNode.groupKind === groupKind,
+						),
 					)
 					let sortNodesExcludingEslintDisabled = (
 						ignoreEslintDisabledNodes: boolean,
@@ -125,10 +122,7 @@ export default createRule<unknown[], MessageId>({
 						let indexOfRight = sortedNodes.indexOf(right)
 						let indexOfRightExcludingEslintDisabled =
 							sortedNodesExcludingEslintDisabled.indexOf(right)
-						if (
-							indexOfLeft < indexOfRight &&
-							indexOfLeft < indexOfRightExcludingEslintDisabled
-						) {
+						if (indexOfLeft < indexOfRight && indexOfLeft < indexOfRightExcludingEslintDisabled) {
 							return
 						}
 

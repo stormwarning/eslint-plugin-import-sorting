@@ -46,5 +46,6 @@ export function getEslintDisabledLines({
 	return returnValue
 }
 
-let createArrayFromTo = (index_: number, index: number): number[] =>
-	Array.from({ length: index - index_ + 1 }, (_, item) => index_ + item)
+// eslint-disable-next-line unicorn/prevent-abbreviations
+let createArrayFromTo = (i: number, index: number): number[] =>
+	Array.from({ length: index - i + 1 }, (_, item) => i + item)
