@@ -83,6 +83,7 @@ export default createRule<unknown[], MessageId>({
 				isEslintDisabled: isNodeEslintDisabled(node, eslintDisabledLines),
 				name,
 				node,
+				shouldAddSafetySemicolonWhenInline: true,
 				size: rangeToDiff(node, sourceCode),
 			})
 		}

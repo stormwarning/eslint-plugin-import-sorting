@@ -25,7 +25,7 @@ export function makeFixes({
 		let sortingNode = nodes.at(index)!
 		let sortedSortingNode = sortedNodes.at(index)!
 		let { node } = sortingNode
-		let { node: sortedNode } = sortedSortingNode
+		let { shouldAddSafetySemicolonWhenInline, node: sortedNode } = sortedSortingNode
 		let isNodeFirstNode = node === nodes.at(0)!.node
 		let isSortedNodeFirstNode = sortedNode === nodes.at(0)!.node
 
@@ -50,6 +50,7 @@ export function makeFixes({
 		let isNextTokenOnSameLineAsNode = nextToken?.loc.start.line === node.loc.end.line
 		let isNextTokenSafeCharacter = nextToken?.value === ';' || nextToken?.value === ','
 		if (
+			shouldAddSafetySemicolonWhenInline &&
 			isNextTokenOnSameLineAsNode &&
 			!willSortedNextNodeEndWithSafeCharacter &&
 			!isNextTokenSafeCharacter

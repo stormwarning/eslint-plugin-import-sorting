@@ -15,6 +15,7 @@ export interface SortingNode<Node extends TSESTree.Node = TSESTree.Node> {
 	group?: string
 	isEslintDisabled: boolean
 	hasMultipleImportDeclarations?: boolean
+	shouldAddSafetySemicolonWhenInline?: boolean
 }
 
 export interface MemberSortingNode extends SortingNode<TSESTree.ImportClause> {
