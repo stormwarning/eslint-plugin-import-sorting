@@ -1,5 +1,11 @@
 # eslint-plugin-import-sorting
 
+## 2.1.2
+
+### Patch Changes
+
+- Fix semicolons being added to end of import specifiers after sorting ([#29](https://github.com/stormwarning/eslint-plugin-import-sorting/pull/29))
+
 ## 2.1.1
 
 ### Patch Changes
